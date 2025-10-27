@@ -21,7 +21,8 @@
     .wrap{max-width:1100px; margin:0 auto; padding:14px 18px}
     .brand{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
     .brand h1{font-size:20px; margin:0}
-    .actions{margin-left:auto; display:flex; gap:10px}
+    .countdown{margin-left:auto; font-weight:700; color:#ffd9b3}
+    .actions{display:flex; gap:10px}
     .btn{border:1px solid var(--border); background:linear-gradient(180deg, var(--panel), var(--panel-2)); color:var(--text);
       padding:10px 14px; border-radius:10px; cursor:pointer; display:inline-flex; gap:8px; align-items:center; font-weight:600}
     .btn:hover{border-color:#3a3a48}
@@ -31,7 +32,7 @@
     #map{height:70vh; border:1px solid var(--border); border-radius:14px; overflow:hidden}
     aside{background:linear-gradient(180deg, var(--panel), var(--panel-2)); border:1px solid var(--border); border-radius:14px; padding:14px; min-height:70vh; display:flex; flex-direction:column; gap:12px}
     .searchbar{display:flex; gap:8px}
-    input[type="text"], input[type="time"], input[type="date"], textarea, select{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#121218; color:#f1f1f3; outline:none}
+    input[type="text"], textarea, select{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#121218; color:#f1f1f3; outline:none}
     .filters{display:flex; gap:8px; flex-wrap:wrap}
     .chip{border:1px solid var(--border); padding:8px 10px; border-radius:999px; cursor:pointer; background:var(--chip); font-size:13px; color:#f1f1f3; user-select:none}
     .chip.active{outline:2px solid var(--accent); background:#2b1c10}
@@ -47,19 +48,16 @@
     dialog{border:none; background:#0e0e13cc; padding:0}
     .modal{width:min(720px,92vw); background:linear-gradient(180deg, var(--panel), var(--panel-2)); border:1px solid var(--border); border-radius:14px; padding:16px; margin:auto; color:#f1f1f3}
     .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-    .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
     .full{grid-column:1/-1}
     .note{font-size:12px; color:#b7b7c0}
     .danger{color:#ff4d4f}
-    .toolbar{display:flex; gap:8px; flex-wrap:wrap}
     .small{font-size:12px; padding:7px 10px}
     @media(max-width:920px){.content{grid-template-columns:1fr} #map,aside{min-height:60vh}}
 
     /* Postcode suggestion dropdown */
     .sug { position: relative; }
     .sug ul {
-      position: absolute; left: 0; right: 0;
-      margin: 6px 0 0; padding: 6px; list-style: none;
+      position: absolute; left: 0; right: 0; margin: 6px 0 0; padding: 6px; list-style: none;
       background: #121218; border: 1px solid var(--border); border-radius: 10px;
       max-height: 220px; overflow: auto; z-index: 1001;
     }
@@ -72,10 +70,9 @@
   <header>
     <div class="wrap brand">
       <div class="row"><span style="font-size:22px">🎃</span><h1>Spooky Street Map</h1><span class="muted">Add your home if you’re welcoming trick-or-treaters</span></div>
+      <div class="countdown" id="countdown" aria-live="polite"></div>
       <div class="actions">
         <button id="addHomeBtn" class="btn accent">➕ Add Your Home</button>
-        <button id="exportBtn" class="btn">⬇️ Export</button>
-        <button id="importBtn" class="btn ghost">⬆️ Import</button>
       </div>
     </div>
   </header>
@@ -85,7 +82,7 @@
     <aside>
       <div class="searchbar"><input id="search" type="text" placeholder="Search by street, town, postcode…" aria-label="Search"></div>
       <div class="filters">
-        <span class="chip" data-filter="teal">Teal pumpkin (allergy-friendly)</span>
+        <span class="chip" data-filter="teal">Teal pumpkin</span>
         <span class="chip" data-filter="lights">Lots of lights</span>
         <span class="chip" data-filter="music">Spooky music</span>
         <span class="chip" data-filter="animatronics">Animatronics</span>
@@ -95,7 +92,7 @@
   </main>
 
   <section class="footer">
-    Tip: Use a nearby corner if you prefer privacy. Addresses can also be shared to the cloud so everyone sees the same list.
+    Tip: Use a nearby corner if you prefer privacy. <a href="/admin.html">Admin</a> page has export/import & moderation.
   </section>
 
   <!-- Add / Edit Modal -->
@@ -110,51 +107,28 @@
           <input type="text" id="name" placeholder="e.g., The Cobweb Cottage"></label></div>
         <div><label>House number
           <input type="text" id="houseNo" placeholder="e.g., 12"></label></div>
-        <div><label>Postcode
+        <div class="full"><label>Postcode
           <input type="text" id="postcode" placeholder="e.g., DE7 9JL">
           <div id="pcSuggest" class="sug hidden"></div>
         </label></div>
         <div class="full"><label>Street & Town/City
-          <input type="text" id="address" list="addrSuggestions" placeholder="e.g., Stoppard Close, Ilkeston, Derbyshire" required></label></div>
-
-        <!-- Hidden date/time (kept for DB compatibility) -->
-        <div id="dateRow" style="display:none"><label>Halloween date
-          <input type="date" id="date"></label></div>
-        <div class="grid-3" id="timeRow" style="display:none">
-          <label id="startLabel">Start <input type="time" id="start"></label>
-          <label id="endLabel">End <input type="time" id="end"></label>
-          <label>Candy type
-            <select id="candy"><option>Mixed</option><option>Chocolate</option><option>Sweets</option><option>Prize/Non-food</option></select>
-          </label>
-        </div>
-        <div class="full row" style="gap:14px">
-          <label class="row" style="gap:6px"><input type="checkbox" id="teal"> Teal pumpkin</label>
-          <label class="row" style="gap:6px"><input type="checkbox" id="lights"> Lots of lights</label>
-          <label class="row" style="gap:6px"><input type="checkbox" id="music"> Spooky music</label>
-          <label class="row" style="gap:6px"><input type="checkbox" id="animatronics"> Animatronics</label>
-        </div>
+          <input type="text" id="address" placeholder="e.g., Stoppard Close, Ilkeston, Derbyshire" required></label></div>
         <div class="full"><label>Notes
           <textarea id="notes" rows="3" placeholder="Accessibility, pets, instructions…"></textarea></label></div>
+        <div class="full" style="display:flex;gap:14px;flex-wrap:wrap">
+          <label><input type="checkbox" id="teal"> Teal pumpkin</label>
+          <label><input type="checkbox" id="lights"> Lots of lights</label>
+          <label><input type="checkbox" id="music"> Spooky music</label>
+          <label><input type="checkbox" id="animatronics"> Animatronics</label>
+        </div>
       </div>
-      <div style="margin-top:12px" class="toolbar">
+      <div style="margin-top:12px; display:flex; gap:8px; align-items:center">
         <button class="btn accent" id="saveBtn" value="confirm">Save Home</button>
         <button id="geocodeBtn" class="btn">📍 Preview Map Pin</button>
         <span class="note">Pins placed via OpenStreetMap; drag if needed.</span>
       </div>
       <div id="previewMap" style="height:280px; margin-top:10px; border:1px solid var(--border); border-radius:12px; display:none"></div>
-      <p class="note" style="margin-top:10px">Data saves to the cloud if configured below, otherwise only in this browser.</p>
       <p class="note danger" id="errorMsg" style="display:none"></p>
-
-      <datalist id="addrSuggestions"></datalist>
-    </form>
-  </dialog>
-
-  <!-- Import Modal -->
-  <dialog id="importDialog">
-    <form method="dialog" class="modal">
-      <header class="row" style="justify-content:space-between; margin-bottom:8px"><h2 style="margin:0">Import Homes</h2><button class="btn small ghost" value="cancel">✖ Close</button></header>
-      <textarea id="importText" rows="10" placeholder='Paste JSON from Export here'></textarea>
-      <div class="toolbar" style="margin-top:10px"><button class="btn accent" id="doImport" value="confirm">Import</button><span class="note">This replaces your current list.</span></div>
     </form>
   </dialog>
 
@@ -162,125 +136,122 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
   (function(){
-    const ADMIN_MODE = false;
-
-    // ====== CLOUD CONFIG ======
+    // ====== CONFIG ======
     const SUPABASE_URL = "https://gstufixpbltnarnhrwcb.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzdHVmaXhwYmx0bmFybmhyd2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NDEyODMsImV4cCI6MjA3NzExNzI4M30.rg05a4k_uUJopohOHf3RGo5-RZAvVjq85cg1kra_tMw";
     const CLOUD_TABLE = 'homes';
-    let supa = null; let cloudMode = false;
 
-    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-      supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      cloudMode = true;
-    }
+    // OPTIONAL: set this to a Zapier/Make/IFTTT webhook to receive an email on new adds
+    const EMAIL_WEBHOOK = ""; // e.g. "https://hook.eu1.make.com/xxxxxxxx"
 
-    // ====== Storage & State ======
-    const KEY = 'halloween_houses_v2';
-    /** @type {Home[]} */
-    let HOMES = [];
+    // ====== State ======
+    const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    /** @type {Home[]} */ let HOMES = [];
     let MAP, LAYER, PREVIEW_MAP, PREVIEW_MARKER;
 
     const els = {
-      map: document.getElementById('map'), list: document.getElementById('list'), search: document.getElementById('search'),
+      map: document.getElementById('map'),
+      list: document.getElementById('list'),
+      search: document.getElementById('search'),
       chips: Array.from(document.querySelectorAll('.chip')),
-      addBtn: document.getElementById('addHomeBtn'), exportBtn: document.getElementById('exportBtn'), importBtn: document.getElementById('importBtn'),
-      addDialog: document.getElementById('addDialog'), importDialog: document.getElementById('importDialog'), importText: document.getElementById('importText'), doImport: document.getElementById('doImport'),
-      name: document.getElementById('name'), address: document.getElementById('address'), postcode: document.getElementById('postcode'), houseNo: document.getElementById('houseNo'),
-      date: document.getElementById('date'), start: document.getElementById('start'), end: document.getElementById('end'), candy: document.getElementById('candy'),
-      teal: document.getElementById('teal'), lights: document.getElementById('lights'), music: document.getElementById('music'), animatronics: document.getElementById('animatronics'),
-      notes: document.getElementById('notes'), saveBtn: document.getElementById('saveBtn'), geocodeBtn: document.getElementById('geocodeBtn'), previewMap: document.getElementById('previewMap'), errorMsg: document.getElementById('errorMsg'),
-      dateRow: document.getElementById('dateRow'), timeRow: document.getElementById('timeRow'), addrSuggestions: document.getElementById('addrSuggestions')
+      addBtn: document.getElementById('addHomeBtn'),
+      addDialog: document.getElementById('addDialog'),
+      name: document.getElementById('name'),
+      address: document.getElementById('address'),
+      postcode: document.getElementById('postcode'),
+      houseNo: document.getElementById('houseNo'),
+      teal: document.getElementById('teal'),
+      lights: document.getElementById('lights'),
+      music: document.getElementById('music'),
+      animatronics: document.getElementById('animatronics'),
+      notes: document.getElementById('notes'),
+      saveBtn: document.getElementById('saveBtn'),
+      geocodeBtn: document.getElementById('geocodeBtn'),
+      previewMap: document.getElementById('previewMap'),
+      errorMsg: document.getElementById('errorMsg'),
+      pcSuggest: document.getElementById('pcSuggest'),
+      countdown: document.getElementById('countdown'),
     };
 
-    if (els.dateRow) els.dateRow.style.display = 'none';
-    if (els.timeRow) els.timeRow.style.display = 'none';
-
-    const now = new Date();
-    const defaultDate = new Date(now.getFullYear(), 9, 31);
-    if (els.date) els.date.valueAsDate = defaultDate;
+    // ====== Init ======
+    init();
 
     async function init(){
-      if (cloudMode){ await cloudLoad(); subscribeRealtime(); }
-      else { loadLocal(); seedIfEmpty(); }
+      await cloudLoad();
       initMap();
       render();
       fitAllMarkers();
+      subscribeRealtime();
+      wireUI();
+      startCountdown();
     }
-
-    function loadLocal(){ try{ HOMES = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch{ HOMES = [] } }
-    function saveLocal(){ localStorage.setItem(KEY, JSON.stringify(HOMES)); render(); }
 
     async function cloudLoad(){
-      const { data, error } = await supa.from(CLOUD_TABLE).select('*').order('updated_at', { ascending:false });
-      if (!error && Array.isArray(data)) { HOMES = data.map(fromRow); }
-      else { console.error(error); HOMES = []; }
+      const { data, error } = await supa.from(CLOUD_TABLE).select('*').order('updated_at',{ascending:false});
+      HOMES = error ? [] : data.map(fromRow);
     }
-
-    async function cloudUpsert(home){
-      const row = toRow(home);
-      const { data, error } = await supa.from(CLOUD_TABLE).upsert(row).select();
-      if (error) throw error; return data?.[0] ? fromRow(data[0]) : home;
-    }
-
-    async function cloudDelete(id){ await supa.from(CLOUD_TABLE).delete().eq('id', id); }
-
-    function subscribeRealtime(){
-      supa.channel('public:homes')
-        .on('postgres_changes', { event:'*', schema:'public', table:CLOUD_TABLE }, payload => {
-          const { eventType, new: n, old } = payload;
-          if (eventType === 'INSERT' || eventType === 'UPDATE'){
-            upsertLocal(fromRow(n), true); fitAllMarkers();
-          } else if (eventType === 'DELETE'){
-            HOMES = HOMES.filter(h=>h.id!==old.id); render(); fitAllMarkers();
-          }
-        })
-        .subscribe();
-    }
-
-    function seedIfEmpty(){ if (HOMES.length) return; HOMES.push({ id: cryptoRandom(), name:'Pumpkin Porch', fullAddress:'Town Square', address: 'Town Square', postcode:'', houseNo:'', lat:51.5074, lng:-0.1278, date: toISODate(defaultDate), start:'', end:'', candy:'Mixed', flags:{teal:true, lights:true, music:true, animatronics:false}, notes:'Friendly for all ages.', updatedAt: Date.now() }); saveLocal(); }
 
     function initMap(){
       MAP = L.map('map', {scrollWheelZoom:true});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(MAP);
       LAYER = L.layerGroup().addTo(MAP);
-      MAP.setView([54.5, -3.4], 5);
-      if (navigator.geolocation){ navigator.geolocation.getCurrentPosition(pos=>MAP.setView([pos.coords.latitude, pos.coords.longitude], 13), ()=>{}); }
+      MAP.setView([54.5,-3.4],5); // UK default; fitAllMarkers() will override when pins exist
     }
 
+    function subscribeRealtime(){
+      supa.channel('public:homes')
+        .on('postgres_changes', { event:'*', schema:'public', table:CLOUD_TABLE }, payload => {
+          const { eventType, new: n, old } = payload;
+          if (eventType === 'INSERT' || eventType === 'UPDATE') {
+            upsertLocal(fromRow(n));
+          } else if (eventType === 'DELETE') {
+            HOMES = HOMES.filter(h=>h.id!==old.id);
+          }
+          render(); fitAllMarkers();
+        })
+        .subscribe();
+    }
+
+    function wireUI(){
+      els.addBtn.addEventListener('click', ()=> openAddDialog(null));
+      els.search.addEventListener('input', debounce(render, 120));
+      els.chips.forEach(c=> c.addEventListener('click', ()=>{ c.classList.toggle('active'); render(); }));
+
+      // Postcode suggestions + preview
+      els.postcode.addEventListener('input', debounce(showSuggestions, 280));
+      document.addEventListener('click', (e)=>{ if (!els.pcSuggest.contains(e.target) && e.target!==els.postcode){ hideSuggestions(); }});
+      els.geocodeBtn.addEventListener('click', onPreview);
+      els.saveBtn.addEventListener('click', onSave);
+
+      // Keyboard
+      document.addEventListener('keydown', (e)=>{
+        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); els.search.focus(); }
+        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='n'){ e.preventDefault(); openAddDialog(null); }
+      });
+
+      // Close dialog when clicking the backdrop
+      els.addDialog.addEventListener('click', (e)=>{ if (e.target===els.addDialog) els.addDialog.close(); });
+    }
+
+    // ====== Rendering ======
     function markerIcon(color){ return L.divIcon({ className:'custom-pin', html:`<div style="width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #0b0b0d;box-shadow:0 0 0 2px rgba(0,0,0,.2)"></div>`, iconSize:[18,18] }); }
     function colorFor(h){ return h.flags?.teal ? '#2fb1d9' : '#ff7a00'; }
-
-    function normalisePostcode(s){
-      if (!s) return '';
-      const raw = s.toUpperCase().replace(/\s+/g,'');
-      if (raw.length < 5) return raw;
-      return raw.slice(0,-3) + ' ' + raw.slice(-3);
-    }
-    function makeHaystack(h){
-      const pc = normalisePostcode(h.postcode || '');
-      const pcTight = pc.replace(/\s+/g,'');
-      return [
-        h.name||'',
-        h.fullAddress||'',
-        h.address||'',
-        h.notes||'',
-        h.houseNo||'',
-        pc,
-        pcTight
-      ].join(' ').toLowerCase();
+    function normalisePostcode(s){ if(!s) return ''; const r=s.toUpperCase().replace(/\s+/g,''); return r.length<5 ? r : r.slice(0,-3)+' '+r.slice(-3); }
+    function haystack(h){
+      const pc = normalisePostcode(h.postcode||''); const pcT = pc.replace(/\s+/g,'');
+      return [h.name||'', h.fullAddress||'', h.address||'', h.notes||'', h.houseNo||'', pc, pcT].join(' ').toLowerCase();
     }
 
     function render(){
       LAYER.clearLayers();
 
-      const qRaw = (els.search.value || '').trim().toLowerCase();
+      const qRaw = (els.search.value||'').trim().toLowerCase();
       const qTight = qRaw.replace(/\s+/g,'');
       const activeFilters = new Set(els.chips.filter(c=>c.classList.contains('active')).map(c=>c.dataset.filter));
 
       const filtered = HOMES.filter(h=>{
         if (qRaw){
-          const hay = makeHaystack(h);
+          const hay = haystack(h);
           if (!hay.includes(qRaw) && !hay.includes(qTight)) return false;
         }
         if (activeFilters.has('teal') && !h.flags?.teal) return false;
@@ -290,28 +261,25 @@
         return true;
       });
 
-      const bounds = [];
+      const bounds=[];
       filtered.forEach(h=>{
-        if (isNumber(h.lat) && isNumber(h.lng)){
+        if (isNum(h.lat) && isNum(h.lng)){
           const m = L.marker([h.lat,h.lng], { icon: markerIcon(colorFor(h)), draggable:true }).addTo(LAYER);
-          m.bindPopup(popupHTML(h));
-          m.on('dragend', e=>{ const {lat,lng}=e.target.getLatLng(); h.lat=lat; h.lng=lng; h.updatedAt=Date.now(); persist(h); });
+          m.bindPopup(`<strong>${esc(h.name||'Halloween House')}</strong><br><span class="muted">${esc(h.fullAddress || h.address || '')}</span><br>${h.flags?.teal?'<span class="badge teal">Teal pumpkin</span>':''}${h.notes?`<div style="margin-top:6px">${esc(h.notes)}</div>`:''}`);
+          m.on('dragend', e=>{ const {lat,lng}=e.target.getLatLng(); h.lat=lat; h.lng=lng; h.updatedAt=Date.now(); persist(h,false); });
           bounds.push([h.lat,h.lng]);
         }
       });
-      if (bounds.length) try{ MAP.fitBounds(bounds,{padding:[40,40]}); }catch{}
+      if (bounds.length){ try{ MAP.fitBounds(bounds,{padding:[40,40]}); }catch{} }
 
-      els.list.innerHTML = '';
-      if (!filtered.length){
-        els.list.innerHTML = `<p class="muted">No homes match your search yet.</p>`;
-      } else {
-        filtered
-          .sort((a,b)=>((a.fullAddress||a.address||'').localeCompare(b.fullAddress||b.address||'')))
-          .forEach(h=> els.list.appendChild(homeRow(h)) );
-      }
+      els.list.innerHTML='';
+      if (!filtered.length){ els.list.innerHTML = `<p class="muted">No homes match your search yet.</p>`; }
+      else filtered
+        .sort((a,b)=> (a.fullAddress||a.address||'').localeCompare(b.fullAddress||b.address||'')) 
+        .forEach(h=> els.list.appendChild(row(h)));
     }
 
-    function homeRow(h){
+    function row(h){
       const el = document.createElement('div'); el.className='home';
       el.innerHTML = `
         <div class="row" style="flex-direction:column; gap:6px">
@@ -319,129 +287,130 @@
         </div>
         <div>
           <div class="row" style="justify-content:space-between">
-            <strong>${escapeHTML(h.name||'Halloween House')}</strong>
-            <span class="muted">${escapeHTML(h.fullAddress || h.address || '')}</span>
+            <strong>${esc(h.name||'Halloween House')}</strong>
+            <span class="muted">${esc(h.fullAddress || h.address || '')}</span>
           </div>
           <div class="kvs" style="margin:6px 0 8px">
-            <span>🎃 ${escapeHTML(h.candy||'Mixed')}</span>
+            ${h.flags?.lights?'<span>💡 Lights</span>':''}
+            ${h.flags?.music?'<span>🎵 Music</span>':''}
+            ${h.flags?.animatronics?'<span>🤖 Animatronics</span>':''}
           </div>
-          <div class="muted">${escapeHTML(h.notes||'')}</div>
+          <div class="muted">${esc(h.notes||'')}</div>
           <div class="row" style="margin-top:8px; gap:10px; flex-wrap:wrap">
-            ${h.flags?.lights?'<span class="badge">Lights</span>':''}
-            ${h.flags?.music?'<span class="badge">Music</span>':''}
-            ${h.flags?.animatronics?'<span class="badge">Animatronics</span>':''}
             <button class="btn small ghost" data-id="${h.id}" data-act="center">📍 Center</button>
-            <button class="btn small" data-id="${h.id}" data-act="edit">✏️ Edit</button>
-            ${ADMIN_MODE ? `<button class="btn small ghost danger" data-id="${h.id}" data-act="delete">🗑️ Delete</button>` : ``}
           </div>
         </div>`;
-      el.querySelectorAll('button').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const id = btn.dataset.id; const act = btn.dataset.act; const item = HOMES.find(x=>x.id===id); if (!item) return;
-          if (act==='center' && isNumber(item.lat)&&isNumber(item.lng)) MAP.setView([item.lat,item.lng], 18, {animate:true});
-          else if (act==='edit') openAddDialog(item);
-          else if (act==='delete' && ADMIN_MODE) if (confirm('Remove this home?')) removeHome(item.id);
-        });
-      });
+      el.querySelector('[data-act="center"]').addEventListener('click', ()=>{ if (isNum(h.lat)&&isNum(h.lng)) MAP.setView([h.lat,h.lng], 18, {animate:true}); });
       return el;
     }
 
-    function popupHTML(h){
-      return `<strong>${escapeHTML(h.name||'Halloween House')}</strong><br>
-        <span class="muted">${escapeHTML(h.fullAddress || h.address || '')}</span><br>
-        ${h.flags?.teal?'<span class="badge teal">Teal pumpkin</span><br>':''}
-        <div style="margin-top:6px">${escapeHTML(h.notes||'')}</div>`;
+    // ====== Add dialog ======
+    let editing = null; // public page = add only, but keep for safety
+    function openAddDialog(existing){
+      editing = existing?.id || null; els.errorMsg.style.display='none'; els.previewMap.style.display='none';
+      els.houseNo.value = existing?.houseNo || '';
+      els.postcode.value = existing?.postcode || '';
+      els.address.value  = existing?.address  || '';
+      els.name.value     = existing?.name||'';
+      els.teal.checked   = !!existing?.flags?.teal;
+      els.lights.checked = !!existing?.flags?.lights;
+      els.music.checked  = !!existing?.flags?.music;
+      els.animatronics.checked = !!existing?.flags?.animatronics;
+      els.notes.value    = existing?.notes||'';
+      els.addDialog.showModal();
+      setTimeout(()=> initPreview(existing), 60);
+      hideSuggestions();
     }
 
-    // ====== Postcode suggestions & preview ======
-    const pcSuggestEl = document.getElementById('pcSuggest');
-
-    const suggest = debounce(async ()=>{
-      const pcRaw = (els.postcode.value||'').toUpperCase().replace(/\s+/g,'');
-      if (pcRaw.length < 5){ hidePcSuggestions(); return; }
-      const pc = normalisePostcode(pcRaw);
-      if (!pc){ hidePcSuggestions(); return; }
-      els.postcode.value = pc;
-
-      try{
-        const url = new URL('https://nominatim.openstreetmap.org/search');
-        url.searchParams.set('format', 'jsonv2');
-        url.searchParams.set('q', pc + ' UK');
-        url.searchParams.set('limit', '8');
-        url.searchParams.set('addressdetails', '1');
-        url.searchParams.set('countrycodes', 'gb');
-        const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
-        if (!res.ok) throw new Error('lookup failed');
-        const data = await res.json();
-
-        const options = [];
-        const seen = new Set();
-        for (const row of data){
-          const a = row.address || {};
-          const road = a.road || a.pedestrian || a.footway || a.path || a.residential || '';
-          const town = a.village || a.town || a.city || a.suburb || a.hamlet || a.county || '';
-          if (!road || !town) continue;
-          const s = `${road}, ${town}`;
-          if (!seen.has(s)){ seen.add(s); options.push(s); }
-        }
-        renderPcSuggestions(options);
-      }catch(e){
-        hidePcSuggestions();
+    function initPreview(existing){
+      if (!PREVIEW_MAP){
+        els.previewMap.style.display='block';
+        PREVIEW_MAP = L.map('previewMap', {scrollWheelZoom:false});
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(PREVIEW_MAP);
+        PREVIEW_MAP.setView([54.5,-3.4],5);
       }
-    }, 280);
-
-    function renderPcSuggestions(list){
-      if (!pcSuggestEl) return;
-      if (!list.length){
-        pcSuggestEl.classList.add('hidden');
-        pcSuggestEl.innerHTML = '';
-        return;
+      if (existing && isNum(existing.lat) && isNum(existing.lng)){
+        if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([existing.lat, existing.lng], {draggable:true}).addTo(PREVIEW_MAP); }
+        else PREVIEW_MARKER.setLatLng([existing.lat, existing.lng]);
+        PREVIEW_MAP.setView([existing.lat, existing.lng], 15);
+      } else {
+        if (PREVIEW_MARKER){ PREVIEW_MAP.removeLayer(PREVIEW_MARKER); PREVIEW_MARKER=null; }
+        PREVIEW_MAP.setView([54.5,-3.4],5);
       }
-      const html = '<ul>' + list.slice(0,12).map(s => `<li data-addr="${s.replace(/"/g,'&quot;')}">${s}</li>`).join('') + '</ul>';
-      pcSuggestEl.innerHTML = html;
-      pcSuggestEl.classList.remove('hidden');
-      pcSuggestEl.querySelectorAll('li').forEach(li=>{
-        li.addEventListener('click', async ()=>{
-          const chosen = li.getAttribute('data-addr') || '';
-          document.getElementById('address').value = chosen;
-          hidePcSuggestions();
-          await maybePreview();
-          document.getElementById('houseNo').focus();
-        });
-      });
-    }
-    function hidePcSuggestions(){
-      if (!pcSuggestEl) return;
-      pcSuggestEl.classList.add('hidden');
-      pcSuggestEl.innerHTML = '';
     }
 
-    const previewDebounced = debounce(maybePreview, 350);
-    document.getElementById('postcode').addEventListener('input', suggest);
-    document.getElementById('postcode').addEventListener('blur', previewDebounced);
-    document.getElementById('postcode').addEventListener('keydown', (e)=>{ if (e.key === 'Escape') hidePcSuggestions(); });
-    document.addEventListener('click', (e)=>{ if (!pcSuggestEl.contains(e.target) && e.target.id !== 'postcode'){ hidePcSuggestions(); }});
-    document.getElementById('address').addEventListener('input', previewDebounced);
-    document.getElementById('search').addEventListener('input', debounce(render, 120));
-
-    async function maybePreview(){
+    async function onPreview(e){
+      e.preventDefault(); els.errorMsg.style.display='none';
       const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value);
-      if (!full.trim()) return;
-      try{
-        const pos = await geocode(full);
-        showPreviewAt(pos.lat, pos.lng);
-      }catch{}
+      if (!full){ showError('Please enter address details.'); return; }
+      try{ const pos = await geocode(full); showPreviewAt(pos.lat,pos.lng); }
+      catch{ showError('Could not find that address. You can still save and drag the pin later.'); }
     }
+
+    async function onSave(e){
+      e.preventDefault(); els.errorMsg.style.display='none';
+      const isNew = !editing;
+      const item = sanitizeHome({
+        id: editing || cryptoId(),
+        name: els.name.value.trim(),
+        address: els.address.value.trim(),
+        postcode: els.postcode.value.trim(),
+        houseNo: els.houseNo.value.trim(),
+        flags:{ teal:els.teal.checked, lights:els.lights.checked, music:els.music.checked, animatronics:els.animatronics.checked },
+        notes: els.notes.value.trim(),
+        updatedAt: Date.now()
+      });
+      item.fullAddress = buildFullAddress(item.houseNo, item.address, item.postcode) || item.address;
+
+      if (PREVIEW_MARKER){ const ll = PREVIEW_MARKER.getLatLng(); item.lat=ll.lat; item.lng=ll.lng; }
+      if (!isNum(item.lat) || !isNum(item.lng)){ try{ const pos = await geocode(item.fullAddress); item.lat=pos.lat; item.lng=pos.lng; }catch{} }
+
+      try{
+        await persist(item, true);
+        els.addDialog.close();
+        els.previewMap.style.display='none';
+        fitAllMarkers();
+        if (isNew && EMAIL_WEBHOOK){
+          // Fire-and-forget webhook so you get an email via your automation tool
+          fetch(EMAIL_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ event:'home_added', home:item }) }).catch(()=>{});
+        }
+      }catch(err){ showError('Save failed. Check keys/table.'); console.error(err); }
+    }
+
+    // ====== Geocoding & suggestions ======
+    async function showSuggestions(){
+      const raw=(els.postcode.value||'').toUpperCase().replace(/\s+/g,'');
+      if (raw.length<5){ hideSuggestions(); return; }
+      const pc = raw.slice(0,-3)+' '+raw.slice(-3);
+      els.postcode.value = pc;
+      try{
+        const u=new URL('https://nominatim.openstreetmap.org/search');
+        u.searchParams.set('format','jsonv2'); u.searchParams.set('q',pc+' UK'); u.searchParams.set('limit','8'); u.searchParams.set('addressdetails','1'); u.searchParams.set('countrycodes','gb');
+        const res=await fetch(u,{headers:{'Accept':'application/json'}}); if(!res.ok) throw 0;
+        const data=await res.json();
+        const list=[]; const seen=new Set();
+        data.forEach(row=>{ const a=row.address||{}; const road=a.road||a.pedestrian||a.residential||''; const town=a.village||a.town||a.city||a.suburb||a.hamlet||a.county||''; if(road&&town){const s=`${road}, ${town}`; if(!seen.has(s)){seen.add(s); list.push(s);} }});
+        if(!list.length){ hideSuggestions(); return; }
+        els.pcSuggest.classList.remove('hidden');
+        els.pcSuggest.innerHTML='<ul>'+list.slice(0,12).map(s=>`<li>${s}</li>`).join('')+'</ul>';
+        els.pcSuggest.querySelectorAll('li').forEach(li=>li.addEventListener('click', async ()=>{
+          els.address.value = li.textContent || '';
+          hideSuggestions();
+          try{ const pos=await geocode(buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value)); showPreviewAt(pos.lat,pos.lng); }catch{}
+        }));
+      }catch{ hideSuggestions(); }
+    }
+    function hideSuggestions(){ els.pcSuggest.classList.add('hidden'); els.pcSuggest.innerHTML=''; }
 
     function showPreviewAt(lat,lng){
-      els.previewMap.style.display = 'block';
+      els.previewMap.style.display='block';
       if (!PREVIEW_MAP){
         PREVIEW_MAP = L.map('previewMap', {scrollWheelZoom:false});
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(PREVIEW_MAP);
       }
-      if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([lat,lng], {draggable:true}).addTo(PREVIEW_MAP); }
-      else { PREVIEW_MARKER.setLatLng([lat,lng]); }
-      PREVIEW_MAP.setView([lat,lng], 16);
+      if (!PREVIEW_MARKER){ PREVIEW_MARKER=L.marker([lat,lng],{draggable:true}).addTo(PREVIEW_MAP); }
+      else PREVIEW_MARKER.setLatLng([lat,lng]);
+      PREVIEW_MAP.setView([lat,lng],16);
     }
 
     async function geocode(q){
@@ -458,105 +427,52 @@
       return {lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)};
     }
 
-    // ====== Add/Edit ======
-    let editing = null;
-    function openAddDialog(existing){
-      editing = existing?.id || null; els.errorMsg.style.display='none'; els.previewMap.style.display='none';
-      els.houseNo.value = existing?.houseNo || '';
-      els.postcode.value = existing?.postcode || '';
-      els.address.value  = existing?.address  || '';
-      els.name.value = existing?.name||''; els.date.value = existing?.date || (els.date?.value ?? ''); els.start.value = existing?.start||''; els.end.value = existing?.end||''; els.candy.value = existing?.candy||'Mixed';
-      els.teal.checked = !!existing?.flags?.teal; els.lights.checked=!!existing?.flags?.lights; els.music.checked=!!existing?.flags?.music; els.animatronics.checked=!!existing?.flags?.animatronics; els.notes.value = existing?.notes||'';
-      document.getElementById('homeForm').reset; els.addDialog.showModal(); setTimeout(()=> initPreview(existing), 100);
-      hidePcSuggestions();
+    // ====== Persistence & mapping ======
+    async function persist(h, rerender){
+      upsertLocal(h);
+      const { error } = await supa.from(CLOUD_TABLE).upsert([toRow(h)]);
+      if (error) throw error;
+      if (rerender) render();
     }
+    function upsertLocal(h){ const i=HOMES.findIndex(x=>x.id===h.id); if(i>-1) HOMES[i]=h; else HOMES.push(h); }
+    function toRow(h){ return { id:h.id, name:h.name, address:h.address, postcode:h.postcode, house_no:h.houseNo, full_address:h.fullAddress, lat:h.lat, lng:h.lng, candy:'Mixed', teal:h.flags?.teal, lights:h.flags?.lights, music:h.flags?.music, animatronics:h.flags?.animatronics, notes:h.notes, updated_at:new Date(h.updatedAt||Date.now()).toISOString() }; }
+    function fromRow(r){ return sanitizeHome({ id:r.id, name:r.name, address:r.address, postcode:r.postcode, houseNo:r.house_no, fullAddress:r.full_address, lat:r.lat, lng:r.lng, candy:r.candy, flags:{ teal:!!r.teal, lights:!!r.lights, music:!!r.music, animatronics:!!r.animatronics }, notes:r.notes, updatedAt: Date.parse(r.updated_at||Date.now()) }); }
 
-    function initPreview(existing){
-      if (!PREVIEW_MAP){
-        els.previewMap.style.display='block';
-        PREVIEW_MAP = L.map('previewMap', {scrollWheelZoom:false});
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(PREVIEW_MAP);
-        PREVIEW_MAP.setView([54.5,-3.4],5);
-      }
-      if (existing && isNumber(existing.lat) && isNumber(existing.lng)){
-        if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([existing.lat, existing.lng], {draggable:true}).addTo(PREVIEW_MAP); }
-        else PREVIEW_MARKER.setLatLng([existing.lat, existing.lng]);
-        PREVIEW_MAP.setView([existing.lat, existing.lng], 15);
-      } else {
-        if (PREVIEW_MARKER){ PREVIEW_MAP.removeLayer(PREVIEW_MARKER); PREVIEW_MARKER=null; }
-        PREVIEW_MAP.setView([54.5,-3.4],5);
-      }
-    }
-
-    document.getElementById('geocodeBtn').addEventListener('click', async (e)=>{
-      e.preventDefault(); els.errorMsg.style.display='none';
-      const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value);
-      if (!full){ showError('Please enter address details.'); return; }
-      try{
-        const pos = await geocode(full);
-        showPreviewAt(pos.lat, pos.lng);
-      }catch{ showError('Could not find that address. You can still save and drag the pin later.'); }
-    });
-
-    document.getElementById('saveBtn').addEventListener('click', async (e)=>{
-      e.preventDefault(); els.errorMsg.style.display='none';
-      const item = collectForm();
-      if (!item.address){ showError('Street & town/city is required.'); return; }
-      item.fullAddress = buildFullAddress(item.houseNo, item.address, item.postcode) || item.address;
-
-      if (PREVIEW_MARKER){ const ll = PREVIEW_MARKER.getLatLng(); item.lat = ll.lat; item.lng = ll.lng; }
-      if (!isNumber(item.lat) || !isNumber(item.lng)){
-        try{ const pos = await geocode(item.fullAddress); item.lat = pos.lat; item.lng = pos.lng; }catch{}
-      }
-
-      try{
-        if (editing){ item.id = editing; await persist(item); }
-        else { item.id = cryptoRandom(); await persist(item); }
-        els.addDialog.close();
-        if (PREVIEW_MARKER){ PREVIEW_MAP.removeLayer(PREVIEW_MARKER); PREVIEW_MARKER=null; }
-        els.previewMap.style.display='none';
-        fitAllMarkers();
-      }catch(err){ showError('Save failed. If cloud is enabled, check your keys and table.'); console.error(err); }
-    });
-
-    document.getElementById('exportBtn').addEventListener('click', ()=>{ const blob = new Blob([JSON.stringify(HOMES,null,2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='halloween-homes.json'; a.click(); URL.revokeObjectURL(a.href); });
-    document.getElementById('importBtn').addEventListener('click', ()=>{ els.importText.value=''; els.importDialog.showModal(); });
-    document.getElementById('doImport').addEventListener('click', (e)=>{ e.preventDefault(); try{ const data = JSON.parse(els.importText.value||'[]'); if (!Array.isArray(data)) throw new Error('Invalid JSON'); HOMES = data.map(sanitizeHome); persistAll(HOMES); els.importDialog.close(); fitAllMarkers(); }catch{ alert('Import failed. Paste valid JSON.'); } });
-
-    function collectForm(){ return sanitizeHome({ name: els.name.value.trim(), address: els.address.value.trim(), postcode: els.postcode.value.trim(), houseNo: els.houseNo.value.trim(), date: els.date?.value || toISODate(new Date()), start: els.start?.value || '', end: els.end?.value || '', candy: els.candy.value, flags:{ teal: !!els.teal.checked, lights: !!els.lights.checked, music: !!els.music.checked, animatronics: !!els.animatronics.checked }, notes: els.notes.value.trim(), updatedAt: Date.now() }); }
-
-    function sanitizeHome(h){ return { id: h.id || cryptoRandom(), name:(h.name||'').slice(0,120), address:(h.address||'').slice(0,180), postcode:(h.postcode||'').slice(0,16), houseNo:(h.houseNo||'').slice(0,16), fullAddress: (h.fullAddress||'').slice(0,240), lat: isNumber(h.lat)?Number(h.lat):undefined, lng: isNumber(h.lng)?Number(h.lng):undefined, date: h.date || toISODate(new Date()), start: h.start||'', end: h.end||'', candy: h.candy||'Mixed', flags:{ teal: !!(h.flags&&h.flags.teal), lights: !!(h.flags&&h.flags.lights), music: !!(h.flags&&h.flags.music), animatronics: !!(h.flags&&h.flags.animatronics) }, notes:(h.notes||'').slice(0,500), updatedAt: Number(h.updatedAt||Date.now()) }; }
-
-    function buildFullAddress(no, addr, pc){ return [no||'', addr||'', pc||''].filter(Boolean).join(', '); }
-    function toISODate(d){ return new Date(d).toISOString().slice(0,10); }
-    function isNumber(x){ return typeof x==='number' && !Number.isNaN(x); }
-    function cryptoRandom(){ return (self.crypto?.getRandomValues ? [...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('') : Math.random().toString(36).slice(2)); }
-    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c])); }
-    function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
-    function showError(msg){ els.errorMsg.textContent=msg; els.errorMsg.style.display='block'; }
-
-    function upsertLocal(h, doRender=true){ const idx = HOMES.findIndex(x=>x.id===h.id); if (idx>-1) HOMES[idx]=h; else HOMES.push(h); if (doRender) render(); }
-
-    async function persist(h){ h = sanitizeHome(h); upsertLocal(h, false); if (cloudMode){ const saved = await cloudUpsert(h); upsertLocal(saved, false); } else saveLocal(); render(); }
-    function persistAll(list){ if (cloudMode){ HOMES = list.map(sanitizeHome); render(); } else { localStorage.setItem(KEY, JSON.stringify(list)); render(); } }
-
-    function toRow(h){ return { id:h.id, name:h.name, address:h.address, postcode:h.postcode, house_no:h.houseNo, full_address:h.fullAddress, lat:h.lat, lng:h.lng, date:h.date, start:h.start, end:h.end, candy:h.candy, teal: !!h.flags?.teal, lights: !!h.flags?.lights, music: !!h.flags?.music, animatronics: !!h.flags?.animatronics, notes:h.notes, updated_at: new Date(h.updatedAt).toISOString() }; }
-    function fromRow(r){ return sanitizeHome({ id:r.id, name:r.name, address:r.address, postcode:r.postcode, houseNo:r.house_no, fullAddress:r.full_address, lat:r.lat, lng:r.lng, date:r.date, start:r.start, end:r.end, candy:r.candy, flags:{ teal:!!r.teal, lights:!!r.lights, music:!!r.music, animatronics:!!r.animatronics }, notes:r.notes, updatedAt: Date.parse(r.updated_at||Date.now()) }); }
-
+    // ====== Fit bounds ======
     function fitAllMarkers(){
-      const pts = HOMES.filter(h=>isNumber(h.lat)&&isNumber(h.lng)).map(h=>[h.lat,h.lng]);
+      const pts = HOMES.filter(h=>isNum(h.lat)&&isNum(h.lng)).map(h=>[h.lat,h.lng]);
       if (pts.length){ try{ MAP.fitBounds(pts,{padding:[40,40]}); }catch{} }
     }
 
-    // Init
-    init();
+    // ====== Countdown to Oct 31 16:00 GMT ======
+    function startCountdown(){
+      function tick(){
+        const y = new Date().getUTCFullYear();
+        const target = new Date(Date.UTC(y, 9, 31, 16, 0, 0)); // Oct (9) 31 @ 16:00 UTC
+        const now = new Date();
+        let diff = target - now;
+        if (diff <= 0){ els.countdown.textContent = "It's Halloween! 🎃"; return; }
+        const d = Math.floor(diff/86400000);
+        diff %= 86400000;
+        const h = Math.floor(diff/3600000);
+        diff %= 3600000;
+        const m = Math.floor(diff/60000);
+        diff %= 60000;
+        const s = Math.floor(diff/1000);
+        els.countdown.textContent = `⏳ ${d}d ${h}h ${m}m ${s}s to Halloween (16:00 GMT)`;
+      }
+      tick(); setInterval(tick, 1000);
+    }
 
-    // 🔗 Click handler for “Add Your Home”
-    document.getElementById('addHomeBtn').addEventListener('click', () => openAddDialog(null));
+    // ====== helpers ======
+    function buildFullAddress(no, addr, pc){ return [no||'', addr||'', pc||''].filter(Boolean).join(', '); }
+    function sanitizeHome(h){ return { id:h.id || cryptoId(), name:(h.name||'').slice(0,120), address:(h.address||'').slice(0,180), postcode:(h.postcode||'').slice(0,16), houseNo:(h.houseNo||'').slice(0,16), fullAddress:(h.fullAddress||'').slice(0,240), lat:isNum(h.lat)?+h.lat:undefined, lng:isNum(h.lng)?+h.lng:undefined, candy:h.candy||'Mixed', flags:{ teal:!!(h.flags&&h.flags.teal), lights:!!(h.flags&&h.flags.lights), music:!!(h.flags&&h.flags.music), animatronics:!!(h.flags&&h.flags.animatronics) }, notes:(h.notes||'').slice(0,500), updatedAt:Number(h.updatedAt||Date.now()) }; }
+    function cryptoId(){ return [...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+    function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+    const esc = s => (s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    const isNum = x => typeof x==='number' && !Number.isNaN(x);
 
-    // Shortcuts & dialog handling
-    document.addEventListener('keydown', (e)=>{ if ((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); document.getElementById('search').focus(); } if ((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){ e.preventDefault(); openAddDialog(null); } });
-    [document.getElementById('addDialog'), document.getElementById('importDialog')].forEach(dlg=> dlg.addEventListener('click', (e)=>{ if (e.target===dlg) dlg.close(); }));
+    // Kick off!
   })();
 
   /**
@@ -569,9 +485,6 @@
    * @property {string} fullAddress
    * @property {number=} lat
    * @property {number=} lng
-   * @property {string} date
-   * @property {string} start
-   * @property {string} end
    * @property {string} candy
    * @property {{teal:boolean, lights:boolean, music:boolean, animatronics:boolean}} flags
    * @property {string} notes
