@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Neighborhood Trick-or-Treat Map 🎃</title>
-  <meta name="description" content="Add your home to the neighborhood Halloween trick-or-treat map." />
+  <title>Spooky Street Map 🎃 (UK)</title>
+  <meta name="description" content="Spooky Street Map — add your home if you’re welcoming trick-or-treaters in the UK." />
+  <!-- Emoji favicon (inline SVG) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8E%83%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     :root{
@@ -37,7 +39,6 @@
     .list{overflow:auto; border-top:1px dashed #2b2b36; padding-top:10px}
     .home{border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:10px; background:#121218; display:grid; grid-template-columns:auto 1fr; gap:10px}
     .badge{font-size:12px; padding:2px 8px; border-radius:999px; background:#232333; border:1px solid var(--border); color:#b7b7c0}
-    .badge.green{background:#0f2a1d; color:#bef3d1; border-color:#1f5a3c}
     .badge.teal{background:#0e2730; color:#99e7ff; border-color:#174c5c}
     .muted{color:var(--muted)}
     .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
@@ -59,7 +60,7 @@
 <body>
   <header>
     <div class="wrap brand">
-      <div class="row"><span style="font-size:22px">🎃</span><h1>Neighborhood Trick-or-Treat Map</h1><span class="muted">Add your home if you’re welcoming trick-or-treaters</span></div>
+      <div class="row"><span style="font-size:22px">🎃</span><h1>Spooky Street Map</h1><span class="muted">Add your home if you’re welcoming trick-or-treaters</span></div>
       <div class="actions">
         <button id="addHomeBtn" class="btn accent">➕ Add Your Home</button>
         <button id="exportBtn" class="btn">⬇️ Export</button>
@@ -73,7 +74,6 @@
     <aside>
       <div class="searchbar"><input id="search" type="text" placeholder="Search address, house name, notes…" aria-label="Search"></div>
       <div class="filters">
-        <span class="chip" data-filter="openNow">Open now</span>
         <span class="chip" data-filter="teal">Teal pumpkin (allergy-friendly)</span>
         <span class="chip" data-filter="lights">Lots of lights</span>
         <span class="chip" data-filter="music">Spooky music</span>
@@ -102,12 +102,15 @@
         <div><label>Postcode
           <input type="text" id="postcode" placeholder="e.g., DE7 9JL"></label></div>
         <div class="full"><label>Street & Town/City
-          <input type="text" id="address" placeholder="e.g., Stoppard Close, Ilkeston, Derbyshire" required></label></div>
-        <div><label>Halloween date
+          <!-- attach suggestions via datalist -->
+          <input type="text" id="address" list="addrSuggestions" placeholder="e.g., Stoppard Close, Ilkeston, Derbyshire" required></label></div>
+
+        <!-- Hidden date/time (kept for DB compatibility) -->
+        <div id="dateRow" style="display:none"><label>Halloween date
           <input type="date" id="date"></label></div>
-        <div class="grid-3">
-          <label>Start <input type="time" id="start"></label>
-          <label>End <input type="time" id="end"></label>
+        <div class="grid-3" id="timeRow" style="display:none">
+          <label id="startLabel">Start <input type="time" id="start"></label>
+          <label id="endLabel">End <input type="time" id="end"></label>
           <label>Candy type
             <select id="candy"><option>Mixed</option><option>Chocolate</option><option>Sweets</option><option>Prize/Non-food</option></select>
           </label>
@@ -129,6 +132,9 @@
       <div id="previewMap" style="height:280px; margin-top:10px; border:1px solid var(--border); border-radius:12px; display:none"></div>
       <p class="note" style="margin-top:10px">Data saves to the cloud if configured below, otherwise only in this browser.</p>
       <p class="note danger" id="errorMsg" style="display:none"></p>
+
+      <!-- datalist for postcode-based address suggestions -->
+      <datalist id="addrSuggestions"></datalist>
     </form>
   </dialog>
 
@@ -142,14 +148,12 @@
   </dialog>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Optional cloud sync via Supabase (fill keys below) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
   (function(){
     // ====== CLOUD CONFIG ======
-    // If both are filled, the app will sync to a shared online list using Supabase.
-    const SUPABASE_URL = "https://gstufixpbltnarnhrwcb.supabase.co"; 
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzdHVmaXhwYmx0bmFybmhyd2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NDEyODMsImV4cCI6MjA3NzExNzI4M30.rg05a4k_uUJopohOHf3RGo5-RZAvVjq85cg1kra_tMw"; 
+    const SUPABASE_URL = "https://gstufixpbltnarnhrwcb.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzdHVmaXhwYmx0bmFybmhyd2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NDEyODMsImV4cCI6MjA3NzExNzI4M30.rg05a4k_uUJopohOHf3RGo5-RZAvVjq85cg1kra_tMw";
     const CLOUD_TABLE = 'homes';
     let supa = null; let cloudMode = false;
 
@@ -173,13 +177,17 @@
       date: document.getElementById('date'), start: document.getElementById('start'), end: document.getElementById('end'), candy: document.getElementById('candy'),
       teal: document.getElementById('teal'), lights: document.getElementById('lights'), music: document.getElementById('music'), animatronics: document.getElementById('animatronics'),
       notes: document.getElementById('notes'), saveBtn: document.getElementById('saveBtn'), geocodeBtn: document.getElementById('geocodeBtn'), previewMap: document.getElementById('previewMap'), errorMsg: document.getElementById('errorMsg'),
+      dateRow: document.getElementById('dateRow'), timeRow: document.getElementById('timeRow'), addrSuggestions: document.getElementById('addrSuggestions')
     };
 
-    // Default Halloween date + default address fields requested
+    // Hide date/time UI (kept for DB compatibility)
+    if (els.dateRow) els.dateRow.style.display = 'none';
+    if (els.timeRow) els.timeRow.style.display = 'none';
+
+    // Default Halloween date (kept but hidden)
     const now = new Date();
     const defaultDate = new Date(now.getFullYear(), 9, 31);
-    els.date.valueAsDate = defaultDate;
-    // (No default address prefill)
+    if (els.date) els.date.valueAsDate = defaultDate;
 
     // Load and initialize
     async function init(){
@@ -187,6 +195,7 @@
       else { loadLocal(); seedIfEmpty(); }
       initMap();
       render();
+      fitAllMarkers(); // show the area containing pins on startup
     }
 
     function loadLocal(){ try{ HOMES = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch{ HOMES = [] } }
@@ -211,28 +220,29 @@
         .on('postgres_changes', { event:'*', schema:'public', table:CLOUD_TABLE }, payload => {
           const { eventType, new: n, old } = payload;
           if (eventType === 'INSERT' || eventType === 'UPDATE'){
-            upsertLocal(fromRow(n), false);
+            upsertLocal(fromRow(n), true);
+            fitAllMarkers();
           } else if (eventType === 'DELETE'){
-            HOMES = HOMES.filter(h=>h.id!==old.id); render();
+            HOMES = HOMES.filter(h=>h.id!==old.id); render(); fitAllMarkers();
           }
         })
         .subscribe();
     }
 
     // Seed sample if empty (local only)
-    function seedIfEmpty(){ if (HOMES.length) return; HOMES.push({ id: cryptoRandom(), name:'Pumpkin Porch', fullAddress:'Town Square', address: 'Town Square', postcode:'', houseNo:'', lat:51.5074, lng:-0.1278, date: toISODate(defaultDate), start:'17:00', end:'20:30', candy:'Mixed', flags:{teal:true, lights:true, music:true, animatronics:false}, notes:'Friendly for all ages.', updatedAt: Date.now() }); saveLocal(); }
+    function seedIfEmpty(){ if (HOMES.length) return; HOMES.push({ id: cryptoRandom(), name:'Pumpkin Porch', fullAddress:'Town Square', address: 'Town Square', postcode:'', houseNo:'', lat:51.5074, lng:-0.1278, date: toISODate(defaultDate), start:'', end:'', candy:'Mixed', flags:{teal:true, lights:true, music:true, animatronics:false}, notes:'Friendly for all ages.', updatedAt: Date.now() }); saveLocal(); }
 
     // ====== Map ======
     function initMap(){
       MAP = L.map('map', {scrollWheelZoom:true});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(MAP);
       LAYER = L.layerGroup().addTo(MAP);
-      MAP.setView([54.5, -3.4], 5);
+      MAP.setView([54.5, -3.4], 5); // UK-wide start
       if (navigator.geolocation){ navigator.geolocation.getCurrentPosition(pos=>MAP.setView([pos.coords.latitude, pos.coords.longitude], 13), ()=>{}); }
     }
 
     function markerIcon(color){ return L.divIcon({ className:'custom-pin', html:`<div style="width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #0b0b0d;box-shadow:0 0 0 2px rgba(0,0,0,.2)"></div>`, iconSize:[18,18] }); }
-    function colorFor(h){ if (isOpenNow(h)) return '#35d07f'; if (h.flags?.teal) return '#2fb1d9'; return '#ff7a00'; }
+    function colorFor(h){ return h.flags?.teal ? '#2fb1d9' : '#ff7a00'; } // teal = blue, otherwise orange
 
     function render(){
       LAYER.clearLayers();
@@ -241,11 +251,11 @@
       const filtered = HOMES.filter(h=>{
         const hay = (h.name||'') + ' ' + (h.fullAddress||'') + ' ' + (h.notes||'');
         if (q && !hay.toLowerCase().includes(q)) return false;
-        if (activeFilters.has('openNow') && !isOpenNow(h)) return false;
         if (activeFilters.has('teal') && !h.flags?.teal) return false;
         if (activeFilters.has('lights') && !h.flags?.lights) return false;
         if (activeFilters.has('music') && !h.flags?.music) return false;
-        if (activeFilters.has('animatronics') && !h.flags?.animatronics) return false; return true;
+        if (activeFilters.has('animatronics') && !h.flags?.animatronics) return false; 
+        return true;
       });
 
       const bounds = [];
@@ -262,7 +272,8 @@
       // List
       els.list.innerHTML = '';
       if (!filtered.length){ els.list.innerHTML = `<p class="muted">No homes match your filters yet.</p>`; }
-      else filtered.sort((a,b)=>(isOpenNow(b)-isOpenNow(a))||(b.flags?.teal-a.flags?.teal)||(a.fullAddress||'').localeCompare(b.fullAddress||''))
+      else filtered
+        .sort((a,b)=>((a.fullAddress||'').localeCompare(b.fullAddress||'')))
         .forEach(h=> els.list.appendChild(homeRow(h)) );
     }
 
@@ -270,7 +281,6 @@
       const el = document.createElement('div'); el.className='home';
       el.innerHTML = `
         <div class="row" style="flex-direction:column; gap:6px">
-          <span class="badge ${isOpenNow(h)?'green':''}">${isOpenNow(h)?'Open now':'Closed'}</span>
           ${h.flags?.teal?'<span class="badge teal">Teal pumpkin</span>':''}
         </div>
         <div>
@@ -280,8 +290,6 @@
           </div>
           <div class="kvs" style="margin:6px 0 8px">
             <span>🎃 ${escapeHTML(h.candy||'Mixed')}</span>
-            <span>🗓️ ${fmtDate(h.date)}</span>
-            <span>⏰ ${h.start||'--:--'}–${h.end||'--:--'}</span>
           </div>
           <div class="muted">${escapeHTML(h.notes||'')}</div>
           <div class="row" style="margin-top:8px; gap:10px; flex-wrap:wrap">
@@ -307,25 +315,93 @@
     function popupHTML(h){
       return `<strong>${escapeHTML(h.name||'Halloween House')}</strong><br>
         <span class="muted">${escapeHTML(h.fullAddress||'')}</span><br>
-        <span>${fmtDate(h.date)} • ${h.start||'--:--'}–${h.end||'--:--'}</span><br>
-        ${h.flags?.teal?'<span class="badge teal">Teal pumpkin</span>':''}
+        ${h.flags?.teal?'<span class="badge teal">Teal pumpkin</span><br>':''}
         <div style="margin-top:6px">${escapeHTML(h.notes||'')}</div>`;
     }
 
-    function isOpenNow(h){ try{ const todayISO = toISODate(new Date()); if (h.date!==todayISO) return false; if (!h.start||!h.end) return false; const [sh,sm]=h.start.split(':').map(Number); const [eh,em]=h.end.split(':').map(Number); const s=new Date(); s.setHours(sh||0,sm||0,0,0); const e=new Date(); e.setHours(eh||0,em||0,0,0); const n=new Date(); return n>=s && n<=e; }catch{ return false } }
+    // ====== Postcode → Address suggestions ======
+    const suggest = debounce(async ()=>{
+      const pcRaw = (els.postcode.value||'').toUpperCase().replace(/\s+/g,'');
+      if (pcRaw.length < 5) return clearSuggestions();
+      const pc = formatUKPostcode(pcRaw); // e.g., DE79JL -> DE7 9JL
+      if (!pc){ clearSuggestions(); return; }
+
+      try{
+        const url = new URL('https://nominatim.openstreetmap.org/search');
+        url.searchParams.set('format', 'jsonv2');
+        url.searchParams.set('q', pc + ' UK');
+        url.searchParams.set('limit', '8');
+        url.searchParams.set('addressdetails', '1');
+        const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('lookup failed');
+        const data = await res.json();
+
+        const options = [];
+        const seen = new Set();
+        for (const row of data){
+          const a = row.address || {};
+          const road = a.road || a.pedestrian || a.footway || a.path || a.residential || '';
+          const town = a.village || a.town || a.city || a.suburb || a.hamlet || a.county || '';
+          if (!road || !town) continue;
+          const s = `${road}, ${town}`;
+          if (!seen.has(s)){ seen.add(s); options.push(s); }
+        }
+        fillSuggestions(options);
+
+      }catch(e){ clearSuggestions(); }
+    }, 300);
+
+    function fillSuggestions(list){
+      els.addrSuggestions.innerHTML = '';
+      list.slice(0,12).forEach(s=>{
+        const opt = document.createElement('option');
+        opt.value = s;
+        els.addrSuggestions.appendChild(opt);
+      });
+    }
+    function clearSuggestions(){ if (els.addrSuggestions) els.addrSuggestions.innerHTML=''; }
+
+    function formatUKPostcode(s){
+      // Basic normaliser: inserts a space before the last 3 chars if length allows
+      if (s.length < 5) return null;
+      const out = s.slice(0, -3) + ' ' + s.slice(-3);
+      // Very light validation (not full spec)
+      return out;
+    }
+
+    // When user picks/edits address, try to preview a pin immediately
+    async function maybePreview(){
+      const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value);
+      if (!full.trim()) return;
+      try{
+        const pos = await geocode(full);
+        els.previewMap.style.display = 'block';
+        if (!PREVIEW_MAP){
+          PREVIEW_MAP = L.map('previewMap', {scrollWheelZoom:false});
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(PREVIEW_MAP);
+        }
+        if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([pos.lat,pos.lng], {draggable:true}).addTo(PREVIEW_MAP); }
+        else { PREVIEW_MARKER.setLatLng([pos.lat,pos.lng]); }
+        PREVIEW_MAP.setView([pos.lat,pos.lng], 16);
+      }catch{/* ignore */}
+    }
+
+    // Wire up postcode & address events
+    document.getElementById('postcode').addEventListener('input', suggest);
+    document.getElementById('address').addEventListener('change', maybePreview);
 
     // ====== Add/Edit ======
     let editing = null;
     function openAddDialog(existing){
       editing = existing?.id || null; els.errorMsg.style.display='none'; els.previewMap.style.display='none';
-      // Defaults (user request)
       // Never prefill address fields
       els.houseNo.value = existing?.houseNo || '';
       els.postcode.value = existing?.postcode || '';
-      els.address.value = existing?.address || '';
-      els.name.value = existing?.name||''; els.date.value = existing?.date || els.date.value; els.start.value = existing?.start||''; els.end.value = existing?.end||''; els.candy.value = existing?.candy||'Mixed';
+      els.address.value  = existing?.address  || '';
+      els.name.value = existing?.name||''; els.date.value = existing?.date || (els.date?.value ?? ''); els.start.value = existing?.start||''; els.end.value = existing?.end||''; els.candy.value = existing?.candy||'Mixed';
       els.teal.checked = !!existing?.flags?.teal; els.lights.checked=!!existing?.flags?.lights; els.music.checked=!!existing?.flags?.music; els.animatronics.checked=!!existing?.flags?.animatronics; els.notes.value = existing?.notes||'';
       document.getElementById('homeForm').reset; els.addDialog.showModal(); setTimeout(()=> initPreview(existing), 100);
+      clearSuggestions();
     }
 
     function initPreview(existing){
@@ -339,34 +415,59 @@
     async function geocode(q){ const url = new URL('https://nominatim.openstreetmap.org/search'); url.searchParams.set('format','json'); url.searchParams.set('q', q); url.searchParams.set('limit','1'); url.searchParams.set('addressdetails','0'); const res = await fetch(url.toString(), {headers:{'Accept':'application/json'}}); if (!res.ok) throw new Error('Geocoding failed'); const data = await res.json(); if (!data?.length) throw new Error('No results'); return {lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)}; }
 
     // Events
-    els.addBtn.addEventListener('click', ()=> openAddDialog(null));
-    els.search.addEventListener('input', debounce(render, 120));
-    els.chips.forEach(c=> c.addEventListener('click', ()=>{ c.classList.toggle('active'); render(); }));
+    document.getElementById('addHomeBtn').addEventListener('click', ()=> openAddDialog(null));
+    document.getElementById('search').addEventListener('input', debounce(render, 120));
+    Array.from(document.querySelectorAll('.chip')).forEach(c=> c.addEventListener('click', ()=>{ c.classList.toggle('active'); render(); }));
 
-    els.geocodeBtn.addEventListener('click', async (e)=>{ e.preventDefault(); els.errorMsg.style.display='none'; const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value); if (!full){ showError('Please enter address details.'); return; } try{ const pos = await geocode(full); els.previewMap.style.display='block'; if (!PREVIEW_MAP) initPreview(); if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([pos.lat,pos.lng], {draggable:true}).addTo(PREVIEW_MAP); } else { PREVIEW_MARKER.setLatLng([pos.lat,pos.lng]); } PREVIEW_MAP.setView([pos.lat,pos.lng], 16); }catch{ showError('Could not find that address. You can still save and drag the pin later.'); } });
+    document.getElementById('geocodeBtn').addEventListener('click', async (e)=>{
+      e.preventDefault(); els.errorMsg.style.display='none';
+      const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value);
+      if (!full){ showError('Please enter address details.'); return; }
+      try{
+        const pos = await geocode(full);
+        els.previewMap.style.display='block';
+        if (!PREVIEW_MAP) initPreview();
+        if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([pos.lat,pos.lng], {draggable:true}).addTo(PREVIEW_MAP); }
+        else { PREVIEW_MARKER.setLatLng([pos.lat,pos.lng]); }
+        PREVIEW_MAP.setView([pos.lat,pos.lng], 16);
+      }catch{ showError('Could not find that address. You can still save and drag the pin later.'); }
+    });
 
-    els.saveBtn.addEventListener('click', async (e)=>{ e.preventDefault(); els.errorMsg.style.display='none'; const item = collectForm(); if (!item.address){ showError('Street & town/city is required.'); return; } item.fullAddress = buildFullAddress(item.houseNo, item.address, item.postcode) || item.address; if (PREVIEW_MARKER){ const ll = PREVIEW_MARKER.getLatLng(); item.lat = ll.lat; item.lng = ll.lng; }
+    // Save: auto-geocode if needed, then fit map to pins
+    document.getElementById('saveBtn').addEventListener('click', async (e)=>{
+      e.preventDefault(); els.errorMsg.style.display='none';
+      const item = collectForm();
+      if (!item.address){ showError('Street & town/city is required.'); return; }
+      item.fullAddress = buildFullAddress(item.houseNo, item.address, item.postcode) || item.address;
+
+      if (PREVIEW_MARKER){ const ll = PREVIEW_MARKER.getLatLng(); item.lat = ll.lat; item.lng = ll.lng; }
+      if (!isNumber(item.lat) || !isNumber(item.lng)){
+        try{ const pos = await geocode(item.fullAddress); item.lat = pos.lat; item.lng = pos.lng; }catch{/* ok */ }
+      }
+
       try{
         if (editing){ item.id = editing; await persist(item); }
         else { item.id = cryptoRandom(); await persist(item); }
-        els.addDialog.close(); if (PREVIEW_MARKER){ PREVIEW_MAP.removeLayer(PREVIEW_MARKER); PREVIEW_MARKER=null; } els.previewMap.style.display='none';
+        els.addDialog.close();
+        if (PREVIEW_MARKER){ PREVIEW_MAP.removeLayer(PREVIEW_MARKER); PREVIEW_MARKER=null; }
+        els.previewMap.style.display='none';
+        fitAllMarkers();
       }catch(err){ showError('Save failed. If cloud is enabled, check your keys and table.'); console.error(err); }
     });
 
-    els.exportBtn.addEventListener('click', ()=>{ const blob = new Blob([JSON.stringify(HOMES,null,2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='halloween-homes.json'; a.click(); URL.revokeObjectURL(a.href); });
-    els.importBtn.addEventListener('click', ()=>{ els.importText.value=''; els.importDialog.showModal(); });
-    els.doImport.addEventListener('click', (e)=>{ e.preventDefault(); try{ const data = JSON.parse(els.importText.value||'[]'); if (!Array.isArray(data)) throw new Error('Invalid JSON'); HOMES = data.map(sanitizeHome); persistAll(HOMES); els.importDialog.close(); }catch{ alert('Import failed. Paste valid JSON.'); } });
+    document.getElementById('exportBtn').addEventListener('click', ()=>{ const blob = new Blob([JSON.stringify(HOMES,null,2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='halloween-homes.json'; a.click(); URL.revokeObjectURL(a.href); });
+    document.getElementById('importBtn').addEventListener('click', ()=>{ els.importText.value=''; els.importDialog.showModal(); });
+    document.getElementById('doImport').addEventListener('click', (e)=>{ e.preventDefault(); try{ const data = JSON.parse(els.importText.value||'[]'); if (!Array.isArray(data)) throw new Error('Invalid JSON'); HOMES = data.map(sanitizeHome); persistAll(HOMES); els.importDialog.close(); fitAllMarkers(); }catch{ alert('Import failed. Paste valid JSON.'); } });
 
-    async function removeHome(id){ HOMES = HOMES.filter(x=>x.id!==id); if (cloudMode){ await cloudDelete(id); } persistAll(HOMES); }
+    async function removeHome(id){ HOMES = HOMES.filter(x=>x.id!==id); if (cloudMode){ await cloudDelete(id); } persistAll(HOMES); fitAllMarkers(); }
 
     // ====== Helpers ======
-    function collectForm(){ return sanitizeHome({ name: els.name.value.trim(), address: els.address.value.trim(), postcode: els.postcode.value.trim(), houseNo: els.houseNo.value.trim(), date: els.date.value || toISODate(defaultDate), start: els.start.value, end: els.end.value, candy: els.candy.value, flags:{ teal: !!els.teal.checked, lights: !!els.lights.checked, music: !!els.music.checked, animatronics: !!els.animatronics.checked }, notes: els.notes.value.trim(), updatedAt: Date.now() }); }
+    function collectForm(){ return sanitizeHome({ name: els.name.value.trim(), address: els.address.value.trim(), postcode: els.postcode.value.trim(), houseNo: els.houseNo.value.trim(), date: els.date?.value || toISODate(new Date()), start: els.start?.value || '', end: els.end?.value || '', candy: els.candy.value, flags:{ teal: !!els.teal.checked, lights: !!els.lights.checked, music: !!els.music.checked, animatronics: !!els.animatronics.checked }, notes: els.notes.value.trim(), updatedAt: Date.now() }); }
 
-    function sanitizeHome(h){ return { id: h.id || cryptoRandom(), name:(h.name||'').slice(0,120), address:(h.address||'').slice(0,180), postcode:(h.postcode||'').slice(0,16), houseNo:(h.houseNo||'').slice(0,16), fullAddress: (h.fullAddress||'').slice(0,240), lat: isNumber(h.lat)?Number(h.lat):undefined, lng: isNumber(h.lng)?Number(h.lng):undefined, date: h.date || toISODate(defaultDate), start: h.start||'', end: h.end||'', candy: h.candy||'Mixed', flags:{ teal: !!(h.flags&&h.flags.teal), lights: !!(h.flags&&h.flags.lights), music: !!(h.flags&&h.flags.music), animatronics: !!(h.flags&&h.flags.animatronics) }, notes:(h.notes||'').slice(0,500), updatedAt: Number(h.updatedAt||Date.now()) }; }
+    function sanitizeHome(h){ return { id: h.id || cryptoRandom(), name:(h.name||'').slice(0,120), address:(h.address||'').slice(0,180), postcode:(h.postcode||'').slice(0,16), houseNo:(h.houseNo||'').slice(0,16), fullAddress: (h.fullAddress||'').slice(0,240), lat: isNumber(h.lat)?Number(h.lat):undefined, lng: isNumber(h.lng)?Number(h.lng):undefined, date: h.date || toISODate(new Date()), start: h.start||'', end: h.end||'', candy: h.candy||'Mixed', flags:{ teal: !!(h.flags&&h.flags.teal), lights: !!(h.flags&&h.flags.lights), music: !!(h.flags&&h.flags.music), animatronics: !!(h.flags&&h.flags.animatronics) }, notes:(h.notes||'').slice(0,500), updatedAt: Number(h.updatedAt||Date.now()) }; }
 
     function buildFullAddress(no, addr, pc){ return [no||'', addr||'', pc||''].filter(Boolean).join(', '); }
     function toISODate(d){ return new Date(d).toISOString().slice(0,10); }
-    function fmtDate(iso){ try{ const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }catch{ return iso } }
     function isNumber(x){ return typeof x==='number' && !Number.isNaN(x); }
     function cryptoRandom(){ return (self.crypto?.getRandomValues ? [...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('') : Math.random().toString(36).slice(2)); }
     function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c])); }
@@ -376,21 +477,24 @@
     function upsertLocal(h, doRender=true){ const idx = HOMES.findIndex(x=>x.id===h.id); if (idx>-1) HOMES[idx]=h; else HOMES.push(h); if (doRender) render(); }
 
     async function persist(h){ h = sanitizeHome(h); upsertLocal(h, false); if (cloudMode){ const saved = await cloudUpsert(h); upsertLocal(saved, false); } else saveLocal(); render(); }
-    function persistAll(list){ if (cloudMode){ // bulk replace client-side view; server remains source of truth
-        HOMES = list.map(sanitizeHome); render();
-      } else { localStorage.setItem(KEY, JSON.stringify(list)); render(); }
-    }
+    function persistAll(list){ if (cloudMode){ HOMES = list.map(sanitizeHome); render(); } else { localStorage.setItem(KEY, JSON.stringify(list)); render(); } }
 
     // Row mapping to/from DB
     function toRow(h){ return { id:h.id, name:h.name, address:h.address, postcode:h.postcode, house_no:h.houseNo, full_address:h.fullAddress, lat:h.lat, lng:h.lng, date:h.date, start:h.start, end:h.end, candy:h.candy, teal: !!h.flags?.teal, lights: !!h.flags?.lights, music: !!h.flags?.music, animatronics: !!h.flags?.animatronics, notes:h.notes, updated_at: new Date(h.updatedAt).toISOString() }; }
     function fromRow(r){ return sanitizeHome({ id:r.id, name:r.name, address:r.address, postcode:r.postcode, houseNo:r.house_no, fullAddress:r.full_address, lat:r.lat, lng:r.lng, date:r.date, start:r.start, end:r.end, candy:r.candy, flags:{ teal:!!r.teal, lights:!!r.lights, music:!!r.music, animatronics:!!r.animatronics }, notes:r.notes, updatedAt: Date.parse(r.updated_at||Date.now()) }); }
 
+    // Fit map to all markers
+    function fitAllMarkers(){
+      const pts = HOMES.filter(h=>isNumber(h.lat)&&isNumber(h.lng)).map(h=>[h.lat,h.lng]);
+      if (pts.length){ try{ MAP.fitBounds(pts,{padding:[40,40]}); }catch{} }
+    }
+
     // Init
     init();
 
     // Keyboard shortcuts & dialog handling
-    document.addEventListener('keydown', (e)=>{ if ((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); els.search.focus(); } if ((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){ e.preventDefault(); openAddDialog(null); } });
-    [els.addDialog, els.importDialog].forEach(dlg=> dlg.addEventListener('click', (e)=>{ if (e.target===dlg) dlg.close(); }));
+    document.addEventListener('keydown', (e)=>{ if ((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); document.getElementById('search').focus(); } if ((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){ e.preventDefault(); openAddDialog(null); } });
+    [document.getElementById('addDialog'), document.getElementById('importDialog')].forEach(dlg=> dlg.addEventListener('click', (e)=>{ if (e.target===dlg) dlg.close(); }));
   })();
 
   /**
