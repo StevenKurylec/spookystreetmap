@@ -31,26 +31,26 @@
     #map{height:70vh; border:1px solid var(--border); border-radius:14px; overflow:hidden}
     aside{background:linear-gradient(180deg, var(--panel), var(--panel-2)); border:1px solid var(--border); border-radius:14px; padding:14px; min-height:70vh; display:flex; flex-direction:column; gap:12px}
     .searchbar{display:flex; gap:8px}
-    input[type="text"], input[type="time"], input[type="date"], textarea, select{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#121218; color:var(--text); outline:none}
+    input[type="text"], input[type="time"], input[type="date"], textarea, select{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#121218; color:#f1f1f3; outline:none}
     .filters{display:flex; gap:8px; flex-wrap:wrap}
-    .chip{border:1px solid var(--border); padding:8px 10px; border-radius:999px; cursor:pointer; background:var(--chip); font-size:13px; color:var(--text); user-select:none}
+    .chip{border:1px solid var(--border); padding:8px 10px; border-radius:999px; cursor:pointer; background:var(--chip); font-size:13px; color:#f1f1f3; user-select:none}
     .chip.active{outline:2px solid var(--accent); background:#2b1c10}
     .list{overflow:auto; border-top:1px dashed #2b2b36; padding-top:10px}
     .home{border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:10px; background:#121218; display:grid; grid-template-columns:auto 1fr; gap:10px}
     .badge{font-size:12px; padding:2px 8px; border-radius:999px; background:#232333; border:1px solid var(--border); color:#b7b7c0}
     .badge.teal{background:#0e2730; color:#99e7ff; border-color:#174c5c}
-    .muted{color:var(--muted)}
+    .muted{color:#b7b7c0}
     .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
-    .kvs{display:flex; gap:12px; flex-wrap:wrap; font-size:13px; color:var(--muted)}
+    .kvs{display:flex; gap:12px; flex-wrap:wrap; font-size:13px; color:#b7b7c0}
     .kvs span{padding:2px 8px; border-radius:999px; background:#1a1a24; border:1px solid var(--border)}
-    .footer{max-width:1100px; margin:0 auto 40px; padding:0 18px; color:var(--muted); font-size:13px}
+    .footer{max-width:1100px; margin:0 auto 40px; padding:0 18px; color:#b7b7c0; font-size:13px}
     dialog{border:none; background:#0e0e13cc; padding:0}
-    .modal{width:min(720px,92vw); background:linear-gradient(180deg, var(--panel), var(--panel-2)); border:1px solid var(--border); border-radius:14px; padding:16px; margin:auto; color:var(--text)}
+    .modal{width:min(720px,92vw); background:linear-gradient(180deg, var(--panel), var(--panel-2)); border:1px solid var(--border); border-radius:14px; padding:16px; margin:auto; color:#f1f1f3}
     .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
     .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
     .full{grid-column:1/-1}
-    .note{font-size:12px; color:var(--muted)}
-    .danger{color:var(--red)}
+    .note{font-size:12px; color:#b7b7c0}
+    .danger{color:#ff4d4f}
     .toolbar{display:flex; gap:8px; flex-wrap:wrap}
     .small{font-size:12px; padding:7px 10px}
     @media(max-width:920px){.content{grid-template-columns:1fr} #map,aside{min-height:60vh}}
@@ -63,7 +63,7 @@
       background: #121218; border: 1px solid var(--border); border-radius: 10px;
       max-height: 220px; overflow: auto; z-index: 1001;
     }
-    .sug li { padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--text); }
+    .sug li { padding: 8px 10px; border-radius: 8px; cursor: pointer; color: #f1f1f3; }
     .sug li:hover { background: #1a1a24; }
     .hidden { display: none; }
   </style>
@@ -83,7 +83,7 @@
   <main class="content">
     <div id="map" aria-label="Map of homes"></div>
     <aside>
-      <div class="searchbar"><input id="search" type="text" placeholder="Search address, house name, notes…" aria-label="Search"></div>
+      <div class="searchbar"><input id="search" type="text" placeholder="Search by street, town, postcode…" aria-label="Search"></div>
       <div class="filters">
         <span class="chip" data-filter="teal">Teal pumpkin (allergy-friendly)</span>
         <span class="chip" data-filter="lights">Lots of lights</span>
@@ -162,7 +162,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
   (function(){
-    // Toggle this to true if you ever want to show Delete buttons again:
     const ADMIN_MODE = false;
 
     // ====== CLOUD CONFIG ======
@@ -194,11 +193,9 @@
       dateRow: document.getElementById('dateRow'), timeRow: document.getElementById('timeRow'), addrSuggestions: document.getElementById('addrSuggestions')
     };
 
-    // Hide date/time UI (kept for DB compatibility)
     if (els.dateRow) els.dateRow.style.display = 'none';
     if (els.timeRow) els.timeRow.style.display = 'none';
 
-    // Default Halloween date (kept but hidden)
     const now = new Date();
     const defaultDate = new Date(now.getFullYear(), 9, 31);
     if (els.date) els.date.valueAsDate = defaultDate;
@@ -257,13 +254,42 @@
     function markerIcon(color){ return L.divIcon({ className:'custom-pin', html:`<div style="width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #0b0b0d;box-shadow:0 0 0 2px rgba(0,0,0,.2)"></div>`, iconSize:[18,18] }); }
     function colorFor(h){ return h.flags?.teal ? '#2fb1d9' : '#ff7a00'; }
 
+    // ---------- SEARCH: broadened & postcode-aware ----------
+    function normalisePostcode(s){
+      if (!s) return '';
+      const raw = s.toUpperCase().replace(/\s+/g,'');
+      if (raw.length < 5) return raw;
+      return raw.slice(0,-3) + ' ' + raw.slice(-3); // AA1 1AA style
+    }
+    function makeHaystack(h){
+      // Include all likely searchable fields; both spaced & unspaced postcode versions
+      const pc = normalisePostcode(h.postcode || '');
+      const pcTight = pc.replace(/\s+/g,'');
+      return [
+        h.name||'',
+        h.fullAddress||'',
+        h.address||'',
+        h.notes||'',
+        h.houseNo||'',
+        pc,
+        pcTight
+      ].join(' ').toLowerCase();
+    }
+
     function render(){
       LAYER.clearLayers();
-      const q = els.search.value.trim().toLowerCase();
+
+      const qRaw = (els.search.value || '').trim().toLowerCase();
+      const qTight = qRaw.replace(/\s+/g,''); // helps when user types DE79JL
       const activeFilters = new Set(els.chips.filter(c=>c.classList.contains('active')).map(c=>c.dataset.filter));
+
       const filtered = HOMES.filter(h=>{
-        const hay = (h.name||'') + ' ' + (h.fullAddress||'') + ' ' + (h.notes||'');
-        if (q && !hay.toLowerCase().includes(q)) return false;
+        // text search
+        if (qRaw){
+          const hay = makeHaystack(h);
+          if (!hay.includes(qRaw) && !hay.includes(qTight)) return false;
+        }
+        // tag filters
         if (activeFilters.has('teal') && !h.flags?.teal) return false;
         if (activeFilters.has('lights') && !h.flags?.lights) return false;
         if (activeFilters.has('music') && !h.flags?.music) return false;
@@ -282,11 +308,15 @@
       });
       if (bounds.length) try{ MAP.fitBounds(bounds,{padding:[40,40]}); }catch{}
 
+      // List
       els.list.innerHTML = '';
-      if (!filtered.length){ els.list.innerHTML = `<p class="muted">No homes match your filters yet.</p>`; }
-      else filtered
-        .sort((a,b)=>((a.fullAddress||'').localeCompare(b.fullAddress||'')))
-        .forEach(h=> els.list.appendChild(homeRow(h)) );
+      if (!filtered.length){
+        els.list.innerHTML = `<p class="muted">No homes match your search yet.</p>`;
+      } else {
+        filtered
+          .sort((a,b)=>((a.fullAddress||a.address||'').localeCompare(b.fullAddress||b.address||'')))
+          .forEach(h=> els.list.appendChild(homeRow(h)) );
+      }
     }
 
     function homeRow(h){
@@ -298,7 +328,7 @@
         <div>
           <div class="row" style="justify-content:space-between">
             <strong>${escapeHTML(h.name||'Halloween House')}</strong>
-            <span class="muted">${escapeHTML(h.fullAddress||'')}</span>
+            <span class="muted">${escapeHTML(h.fullAddress || h.address || '')}</span>
           </div>
           <div class="kvs" style="margin:6px 0 8px">
             <span>🎃 ${escapeHTML(h.candy||'Mixed')}</span>
@@ -326,7 +356,7 @@
 
     function popupHTML(h){
       return `<strong>${escapeHTML(h.name||'Halloween House')}</strong><br>
-        <span class="muted">${escapeHTML(h.fullAddress||'')}</span><br>
+        <span class="muted">${escapeHTML(h.fullAddress || h.address || '')}</span><br>
         ${h.flags?.teal?'<span class="badge teal">Teal pumpkin</span><br>':''}
         <div style="margin-top:6px">${escapeHTML(h.notes||'')}</div>`;
     }
@@ -337,9 +367,9 @@
     const suggest = debounce(async ()=>{
       const pcRaw = (els.postcode.value||'').toUpperCase().replace(/\s+/g,'');
       if (pcRaw.length < 5){ hidePcSuggestions(); return; }
-      const pc = formatUKPostcode(pcRaw);
+      const pc = normalisePostcode(pcRaw);
       if (!pc){ hidePcSuggestions(); return; }
-      els.postcode.value = pc; // show normalised form
+      els.postcode.value = pc;
 
       try{
         const url = new URL('https://nominatim.openstreetmap.org/search');
@@ -383,7 +413,7 @@
           const chosen = li.getAttribute('data-addr') || '';
           document.getElementById('address').value = chosen;
           hidePcSuggestions();
-          await maybePreview(); // <— auto-preview after choosing
+          await maybePreview();
           document.getElementById('houseNo').focus();
         });
       });
@@ -394,18 +424,14 @@
       pcSuggestEl.innerHTML = '';
     }
 
-    function formatUKPostcode(s){
-      if (s.length < 5) return null;
-      return s.slice(0, -3) + ' ' + s.slice(-3);
-    }
-
-    // Auto-preview when we have enough info (postcode + address OR fullAddress)
+    // Auto-preview when inputs change
     const previewDebounced = debounce(maybePreview, 350);
     document.getElementById('postcode').addEventListener('input', suggest);
     document.getElementById('postcode').addEventListener('blur', previewDebounced);
     document.getElementById('postcode').addEventListener('keydown', (e)=>{ if (e.key === 'Escape') hidePcSuggestions(); });
     document.addEventListener('click', (e)=>{ if (!pcSuggestEl.contains(e.target) && e.target.id !== 'postcode'){ hidePcSuggestions(); }});
     document.getElementById('address').addEventListener('input', previewDebounced);
+    document.getElementById('search').addEventListener('input', debounce(render, 120)); // make sure search re-renders
 
     async function maybePreview(){
       const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value);
@@ -414,7 +440,7 @@
         const pos = await geocode(full);
         showPreviewAt(pos.lat, pos.lng);
       }catch{
-        showError('Could not preview that address yet. You can still save and drag the pin.');
+        // Silent fail; user can still save and drag
       }
     }
 
@@ -473,7 +499,6 @@
       }
     }
 
-    // Preview button (manual)
     document.getElementById('geocodeBtn').addEventListener('click', async (e)=>{
       e.preventDefault(); els.errorMsg.style.display='none';
       const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value);
@@ -484,7 +509,6 @@
       }catch{ showError('Could not find that address. You can still save and drag the pin later.'); }
     });
 
-    // Save
     document.getElementById('saveBtn').addEventListener('click', async (e)=>{
       e.preventDefault(); els.errorMsg.style.display='none';
       const item = collectForm();
@@ -509,8 +533,6 @@
     document.getElementById('exportBtn').addEventListener('click', ()=>{ const blob = new Blob([JSON.stringify(HOMES,null,2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='halloween-homes.json'; a.click(); URL.revokeObjectURL(a.href); });
     document.getElementById('importBtn').addEventListener('click', ()=>{ els.importText.value=''; els.importDialog.showModal(); });
     document.getElementById('doImport').addEventListener('click', (e)=>{ e.preventDefault(); try{ const data = JSON.parse(els.importText.value||'[]'); if (!Array.isArray(data)) throw new Error('Invalid JSON'); HOMES = data.map(sanitizeHome); persistAll(HOMES); els.importDialog.close(); fitAllMarkers(); }catch{ alert('Import failed. Paste valid JSON.'); } });
-
-    async function removeHome(id){ HOMES = HOMES.filter(x=>x.id!==id); if (cloudMode){ await cloudDelete(id); } persistAll(HOMES); fitAllMarkers(); }
 
     // ====== Helpers ======
     function collectForm(){ return sanitizeHome({ name: els.name.value.trim(), address: els.address.value.trim(), postcode: els.postcode.value.trim(), houseNo: els.houseNo.value.trim(), date: els.date?.value || toISODate(new Date()), start: els.start?.value || '', end: els.end?.value || '', candy: els.candy.value, flags:{ teal: !!els.teal.checked, lights: !!els.lights.checked, music: !!els.music.checked, animatronics: !!els.animatronics.checked }, notes: els.notes.value.trim(), updatedAt: Date.now() }); }
