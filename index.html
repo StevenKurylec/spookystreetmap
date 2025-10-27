@@ -200,7 +200,6 @@
     const defaultDate = new Date(now.getFullYear(), 9, 31);
     if (els.date) els.date.valueAsDate = defaultDate;
 
-    // Load and initialize
     async function init(){
       if (cloudMode){ await cloudLoad(); subscribeRealtime(); }
       else { loadLocal(); seedIfEmpty(); }
@@ -239,10 +238,8 @@
         .subscribe();
     }
 
-    // Seed sample if empty (local only)
     function seedIfEmpty(){ if (HOMES.length) return; HOMES.push({ id: cryptoRandom(), name:'Pumpkin Porch', fullAddress:'Town Square', address: 'Town Square', postcode:'', houseNo:'', lat:51.5074, lng:-0.1278, date: toISODate(defaultDate), start:'', end:'', candy:'Mixed', flags:{teal:true, lights:true, music:true, animatronics:false}, notes:'Friendly for all ages.', updatedAt: Date.now() }); saveLocal(); }
 
-    // ====== Map ======
     function initMap(){
       MAP = L.map('map', {scrollWheelZoom:true});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(MAP);
@@ -254,15 +251,13 @@
     function markerIcon(color){ return L.divIcon({ className:'custom-pin', html:`<div style="width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #0b0b0d;box-shadow:0 0 0 2px rgba(0,0,0,.2)"></div>`, iconSize:[18,18] }); }
     function colorFor(h){ return h.flags?.teal ? '#2fb1d9' : '#ff7a00'; }
 
-    // ---------- SEARCH: broadened & postcode-aware ----------
     function normalisePostcode(s){
       if (!s) return '';
       const raw = s.toUpperCase().replace(/\s+/g,'');
       if (raw.length < 5) return raw;
-      return raw.slice(0,-3) + ' ' + raw.slice(-3); // AA1 1AA style
+      return raw.slice(0,-3) + ' ' + raw.slice(-3);
     }
     function makeHaystack(h){
-      // Include all likely searchable fields; both spaced & unspaced postcode versions
       const pc = normalisePostcode(h.postcode || '');
       const pcTight = pc.replace(/\s+/g,'');
       return [
@@ -280,16 +275,14 @@
       LAYER.clearLayers();
 
       const qRaw = (els.search.value || '').trim().toLowerCase();
-      const qTight = qRaw.replace(/\s+/g,''); // helps when user types DE79JL
+      const qTight = qRaw.replace(/\s+/g,'');
       const activeFilters = new Set(els.chips.filter(c=>c.classList.contains('active')).map(c=>c.dataset.filter));
 
       const filtered = HOMES.filter(h=>{
-        // text search
         if (qRaw){
           const hay = makeHaystack(h);
           if (!hay.includes(qRaw) && !hay.includes(qTight)) return false;
         }
-        // tag filters
         if (activeFilters.has('teal') && !h.flags?.teal) return false;
         if (activeFilters.has('lights') && !h.flags?.lights) return false;
         if (activeFilters.has('music') && !h.flags?.music) return false;
@@ -308,7 +301,6 @@
       });
       if (bounds.length) try{ MAP.fitBounds(bounds,{padding:[40,40]}); }catch{}
 
-      // List
       els.list.innerHTML = '';
       if (!filtered.length){
         els.list.innerHTML = `<p class="muted">No homes match your search yet.</p>`;
@@ -361,7 +353,7 @@
         <div style="margin-top:6px">${escapeHTML(h.notes||'')}</div>`;
     }
 
-    // ====== Postcode → Address suggestions & Auto-Preview ======
+    // ====== Postcode suggestions & preview ======
     const pcSuggestEl = document.getElementById('pcSuggest');
 
     const suggest = debounce(async ()=>{
@@ -424,14 +416,13 @@
       pcSuggestEl.innerHTML = '';
     }
 
-    // Auto-preview when inputs change
     const previewDebounced = debounce(maybePreview, 350);
     document.getElementById('postcode').addEventListener('input', suggest);
     document.getElementById('postcode').addEventListener('blur', previewDebounced);
     document.getElementById('postcode').addEventListener('keydown', (e)=>{ if (e.key === 'Escape') hidePcSuggestions(); });
     document.addEventListener('click', (e)=>{ if (!pcSuggestEl.contains(e.target) && e.target.id !== 'postcode'){ hidePcSuggestions(); }});
     document.getElementById('address').addEventListener('input', previewDebounced);
-    document.getElementById('search').addEventListener('input', debounce(render, 120)); // make sure search re-renders
+    document.getElementById('search').addEventListener('input', debounce(render, 120));
 
     async function maybePreview(){
       const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value);
@@ -439,9 +430,7 @@
       try{
         const pos = await geocode(full);
         showPreviewAt(pos.lat, pos.lng);
-      }catch{
-        // Silent fail; user can still save and drag
-      }
+      }catch{}
     }
 
     function showPreviewAt(lat,lng){
@@ -517,7 +506,7 @@
 
       if (PREVIEW_MARKER){ const ll = PREVIEW_MARKER.getLatLng(); item.lat = ll.lat; item.lng = ll.lng; }
       if (!isNumber(item.lat) || !isNumber(item.lng)){
-        try{ const pos = await geocode(item.fullAddress); item.lat = pos.lat; item.lng = pos.lng; }catch{/* ok */ }
+        try{ const pos = await geocode(item.fullAddress); item.lat = pos.lat; item.lng = pos.lng; }catch{}
       }
 
       try{
@@ -534,7 +523,6 @@
     document.getElementById('importBtn').addEventListener('click', ()=>{ els.importText.value=''; els.importDialog.showModal(); });
     document.getElementById('doImport').addEventListener('click', (e)=>{ e.preventDefault(); try{ const data = JSON.parse(els.importText.value||'[]'); if (!Array.isArray(data)) throw new Error('Invalid JSON'); HOMES = data.map(sanitizeHome); persistAll(HOMES); els.importDialog.close(); fitAllMarkers(); }catch{ alert('Import failed. Paste valid JSON.'); } });
 
-    // ====== Helpers ======
     function collectForm(){ return sanitizeHome({ name: els.name.value.trim(), address: els.address.value.trim(), postcode: els.postcode.value.trim(), houseNo: els.houseNo.value.trim(), date: els.date?.value || toISODate(new Date()), start: els.start?.value || '', end: els.end?.value || '', candy: els.candy.value, flags:{ teal: !!els.teal.checked, lights: !!els.lights.checked, music: !!els.music.checked, animatronics: !!els.animatronics.checked }, notes: els.notes.value.trim(), updatedAt: Date.now() }); }
 
     function sanitizeHome(h){ return { id: h.id || cryptoRandom(), name:(h.name||'').slice(0,120), address:(h.address||'').slice(0,180), postcode:(h.postcode||'').slice(0,16), houseNo:(h.houseNo||'').slice(0,16), fullAddress: (h.fullAddress||'').slice(0,240), lat: isNumber(h.lat)?Number(h.lat):undefined, lng: isNumber(h.lng)?Number(h.lng):undefined, date: h.date || toISODate(new Date()), start: h.start||'', end: h.end||'', candy: h.candy||'Mixed', flags:{ teal: !!(h.flags&&h.flags.teal), lights: !!(h.flags&&h.flags.lights), music: !!(h.flags&&h.flags.music), animatronics: !!(h.flags&&h.flags.animatronics) }, notes:(h.notes||'').slice(0,500), updatedAt: Number(h.updatedAt||Date.now()) }; }
@@ -562,6 +550,9 @@
 
     // Init
     init();
+
+    // 🔗 Click handler for “Add Your Home”
+    document.getElementById('addHomeBtn').addEventListener('click', () => openAddDialog(null));
 
     // Shortcuts & dialog handling
     document.addEventListener('keydown', (e)=>{ if ((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); document.getElementById('search').focus(); } if ((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){ e.preventDefault(); openAddDialog(null); } });
