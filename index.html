@@ -140,9 +140,7 @@
     const SUPABASE_URL = "https://gstufixpbltnarnhrwcb.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzdHVmaXhwYmx0bmFybmhyd2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NDEyODMsImV4cCI6MjA3NzExNzI4M30.rg05a4k_uUJopohOHf3RGo5-RZAvVjq85cg1kra_tMw";
     const CLOUD_TABLE = 'homes';
-
-    // OPTIONAL: set this to a Zapier/Make/IFTTT webhook to receive an email on new adds
-    const EMAIL_WEBHOOK = ""; // e.g. "https://hook.eu1.make.com/xxxxxxxx"
+    const EMAIL_WEBHOOK = ""; // optional: Zapier/Make/IFTTT webhook
 
     // ====== State ======
     const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -341,10 +339,12 @@
 
     async function onPreview(e){
       e.preventDefault(); els.errorMsg.style.display='none';
-      const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value);
-      if (!full){ showError('Please enter address details.'); return; }
-      try{ const pos = await geocode(full); showPreviewAt(pos.lat,pos.lng); }
-      catch{ showError('Could not find that address. You can still save and drag the pin later.'); }
+      try{
+        const pos = await smartGeocode({ houseNo: els.houseNo.value, address: els.address.value, postcode: els.postcode.value });
+        showPreviewAt(pos.lat,pos.lng);
+      } catch {
+        showError('Could not find that address. You can still save and drag the pin later.');
+      }
     }
 
     async function onSave(e){
@@ -363,7 +363,12 @@
       item.fullAddress = buildFullAddress(item.houseNo, item.address, item.postcode) || item.address;
 
       if (PREVIEW_MARKER){ const ll = PREVIEW_MARKER.getLatLng(); item.lat=ll.lat; item.lng=ll.lng; }
-      if (!isNum(item.lat) || !isNum(item.lng)){ try{ const pos = await geocode(item.fullAddress); item.lat=pos.lat; item.lng=pos.lng; }catch{} }
+      if (!isNum(item.lat) || !isNum(item.lng)){
+        try{
+          const pos = await smartGeocode({ houseNo: item.houseNo, address: item.address, postcode: item.postcode });
+          item.lat = pos.lat; item.lng = pos.lng;
+        }catch{/* leave undefined; user can drag later */}
+      }
 
       try{
         await persist(item, true);
@@ -371,13 +376,51 @@
         els.previewMap.style.display='none';
         fitAllMarkers();
         if (isNew && EMAIL_WEBHOOK){
-          // Fire-and-forget webhook so you get an email via your automation tool
           fetch(EMAIL_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ event:'home_added', home:item }) }).catch(()=>{});
         }
       }catch(err){ showError('Save failed. Check keys/table.'); console.error(err); }
     }
 
-    // ====== Geocoding & suggestions ======
+    // ====== Geocoding (UK-structured) & suggestions ======
+    function splitAddress(s){
+      const parts = (s || '').split(',').map(x => x.trim()).filter(Boolean);
+      return { road: parts[0] || '', place: parts[1] || '' };
+    }
+    async function fetchGeo(params){
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('format','jsonv2');
+      url.searchParams.set('limit','1');
+      url.searchParams.set('addressdetails','1');
+      url.searchParams.set('countrycodes','gb');
+      url.searchParams.set('accept-language','en-GB');
+      // UK viewbox (SW lon,lat, NE lon,lat)
+      url.searchParams.set('viewbox','-8.35,49.84,1.78,60.86');
+      url.searchParams.set('bounded','1');
+      for (const [k,v] of Object.entries(params)){ if (v!=null && v!=='') url.searchParams.set(k, v); }
+      const res = await fetch(url.toString(), { headers:{'Accept':'application/json'} });
+      if (!res.ok) throw new Error('lookup failed');
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length===0) throw new Error('no results');
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+    async function smartGeocode({ houseNo, address, postcode }){
+      const pcRaw = (postcode || '').toUpperCase().replace(/\s+/g,'');
+      const pc = pcRaw.length<5 ? pcRaw : pcRaw.slice(0,-3)+' '+pcRaw.slice(-3);
+      const { road, place } = splitAddress(address || '');
+      const street = [houseNo || '', road || ''].filter(Boolean).join(' ').trim();
+
+      // 1) Structured street + place + postcode
+      if (street || place || pc){
+        try { return await fetchGeo({ street: street || undefined, city: place || undefined, postalcode: pc || undefined }); } catch {}
+      }
+      // 2) Postcode centroid
+      if (pc){ try { return await fetchGeo({ postalcode: pc }); } catch {} }
+      // 3) Bounded free-text
+      const full = [houseNo, address, pc].filter(Boolean).join(', ');
+      if (full){ try { return await fetchGeo({ q: full }); } catch {} }
+      throw new Error('Geocoding failed');
+    }
+
     async function showSuggestions(){
       const raw=(els.postcode.value||'').toUpperCase().replace(/\s+/g,'');
       if (raw.length<5){ hideSuggestions(); return; }
@@ -396,7 +439,10 @@
         els.pcSuggest.querySelectorAll('li').forEach(li=>li.addEventListener('click', async ()=>{
           els.address.value = li.textContent || '';
           hideSuggestions();
-          try{ const pos=await geocode(buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value)); showPreviewAt(pos.lat,pos.lng); }catch{}
+          try{
+            const pos = await smartGeocode({ houseNo: els.houseNo.value, address: els.address.value, postcode: els.postcode.value });
+            showPreviewAt(pos.lat,pos.lng);
+          }catch{}
         }));
       }catch{ hideSuggestions(); }
     }
@@ -411,20 +457,6 @@
       if (!PREVIEW_MARKER){ PREVIEW_MARKER=L.marker([lat,lng],{draggable:true}).addTo(PREVIEW_MAP); }
       else PREVIEW_MARKER.setLatLng([lat,lng]);
       PREVIEW_MAP.setView([lat,lng],16);
-    }
-
-    async function geocode(q){
-      const url = new URL('https://nominatim.openstreetmap.org/search');
-      url.searchParams.set('format','json');
-      url.searchParams.set('q', q);
-      url.searchParams.set('limit','1');
-      url.searchParams.set('addressdetails','0');
-      url.searchParams.set('countrycodes','gb');
-      const res = await fetch(url.toString(), {headers:{'Accept':'application/json'}});
-      if (!res.ok) throw new Error('Geocoding failed');
-      const data = await res.json();
-      if (!data?.length) throw new Error('No results');
-      return {lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)};
     }
 
     // ====== Persistence & mapping ======
@@ -472,7 +504,6 @@
     const esc = s => (s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
     const isNum = x => typeof x==='number' && !Number.isNaN(x);
 
-    // Kick off!
   })();
 
   /**
