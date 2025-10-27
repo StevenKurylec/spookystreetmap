@@ -8,26 +8,19 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8E%83%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
-    :root{
-      --bg:#0f0f12; --panel:#16161b; --panel-2:#1d1d24; --text:#f1f1f3; --muted:#b7b7c0;
-      --accent:#ff7a00; --green:#35d07f; --red:#ff4d4f; --border:#262631; --chip:#242432;
-    }
+    :root{ --bg:#0f0f12; --panel:#16161b; --panel-2:#1d1d24; --text:#f1f1f3; --muted:#b7b7c0; --accent:#ff7a00; --green:#35d07f; --red:#ff4d4f; --border:#262631; --chip:#242432; }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial; color:var(--text);
-      background: radial-gradient(1200px 800px at 10% -10%, #2b1535 0%, #0f0f12 50%) fixed;}
-    header{position:sticky; top:0; z-index:1000; background:linear-gradient(180deg, rgba(15,15,18,.95), rgba(15,15,18,.7));
-      backdrop-filter: blur(8px); border-bottom:1px solid var(--border)}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial; color:var(--text); background: radial-gradient(1200px 800px at 10% -10%, #2b1535 0%, #0f0f12 50%) fixed;}
+    header{position:sticky; top:0; z-index:1000; background:linear-gradient(180deg, rgba(15,15,18,.95), rgba(15,15,18,.7)); backdrop-filter: blur(8px); border-bottom:1px solid var(--border)}
     .wrap{max-width:1100px; margin:0 auto; padding:14px 18px}
     .brand{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
     .brand h1{font-size:20px; margin:0}
     .countdown{margin-left:auto; font-weight:700; color:#ffd9b3}
     .actions{display:flex; gap:10px}
-    .btn{border:1px solid var(--border); background:linear-gradient(180deg, var(--panel), var(--panel-2)); color:var(--text);
-      padding:10px 14px; border-radius:10px; cursor:pointer; display:inline-flex; gap:8px; align-items:center; font-weight:600}
+    .btn{border:1px solid var(--border); background:linear-gradient(180deg, var(--panel), var(--panel-2)); color:var(--text); padding:10px 14px; border-radius:10px; cursor:pointer; display:inline-flex; gap:8px; align-items:center; font-weight:600}
     .btn:hover{border-color:#3a3a48}
     .btn.accent{background:linear-gradient(180deg, #ff8513, #ff6a00); border-color:#ff6a00; color:#0b0b0d}
-    .btn.ghost{background:transparent}
     .content{display:grid; grid-template-columns: 1.2fr .8fr; gap:16px; max-width:1100px; margin:16px auto; padding:0 18px 30px}
     #map{height:70vh; border:1px solid var(--border); border-radius:14px; overflow:hidden}
     aside{background:linear-gradient(180deg, var(--panel), var(--panel-2)); border:1px solid var(--border); border-radius:14px; padding:14px; min-height:70vh; display:flex; flex-direction:column; gap:12px}
@@ -53,17 +46,11 @@
     .danger{color:#ff4d4f}
     .small{font-size:12px; padding:7px 10px}
     @media(max-width:920px){.content{grid-template-columns:1fr} #map,aside{min-height:60vh}}
-
-    /* Postcode suggestion dropdown */
     .sug { position: relative; }
-    .sug ul {
-      position: absolute; left: 0; right: 0; margin: 6px 0 0; padding: 6px; list-style: none;
-      background: #121218; border: 1px solid var(--border); border-radius: 10px;
-      max-height: 220px; overflow: auto; z-index: 1001;
-    }
-    .sug li { padding: 8px 10px; border-radius: 8px; cursor: pointer; color: #f1f1f3; }
-    .sug li:hover { background: #1a1a24; }
-    .hidden { display: none; }
+    .sug ul { position: absolute; left: 0; right: 0; margin: 6px 0 0; padding: 6px; list-style:none; background: #121218; border:1px solid var(--border); border-radius:10px; max-height:220px; overflow:auto; z-index:1001; }
+    .sug li { padding:8px 10px; border-radius:8px; cursor:pointer; color:#f1f1f3; }
+    .sug li:hover { background:#1a1a24; }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
@@ -125,7 +112,7 @@
       <div style="margin-top:12px; display:flex; gap:8px; align-items:center">
         <button class="btn accent" id="saveBtn" value="confirm">Save Home</button>
         <button id="geocodeBtn" class="btn">📍 Preview Map Pin</button>
-        <span class="note">Pins placed via OpenStreetMap; drag if needed.</span>
+        <span class="note">Pins placed via OpenStreetMap; manual pin moving is disabled.</span>
       </div>
       <div id="previewMap" style="height:280px; margin-top:10px; border:1px solid var(--border); border-radius:12px; display:none"></div>
       <p class="note danger" id="errorMsg" style="display:none"></p>
@@ -140,9 +127,7 @@
     const SUPABASE_URL = "https://gstufixpbltnarnhrwcb.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzdHVmaXhwYmx0bmFybmhyd2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NDEyODMsImV4cCI6MjA3NzExNzI4M30.rg05a4k_uUJopohOHf3RGo5-RZAvVjq85cg1kra_tMw";
     const CLOUD_TABLE = 'homes';
-    const EMAIL_WEBHOOK = ""; // optional: Zapier/Make/IFTTT webhook
 
-    // ====== State ======
     const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     /** @type {Home[]} */ let HOMES = [];
     let MAP, LAYER, PREVIEW_MAP, PREVIEW_MARKER;
@@ -193,7 +178,7 @@
       MAP = L.map('map', {scrollWheelZoom:true});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(MAP);
       LAYER = L.layerGroup().addTo(MAP);
-      MAP.setView([54.5,-3.4],5); // UK default; fitAllMarkers() will override when pins exist
+      MAP.setView([54.5,-3.4],5);
     }
 
     function subscribeRealtime(){
@@ -211,24 +196,14 @@
     }
 
     function wireUI(){
-      els.addBtn.addEventListener('click', ()=> openAddDialog(null));
+      document.getElementById('addHomeBtn').addEventListener('click', ()=> openAddDialog(null));
       els.search.addEventListener('input', debounce(render, 120));
       els.chips.forEach(c=> c.addEventListener('click', ()=>{ c.classList.toggle('active'); render(); }));
 
-      // Postcode suggestions + preview
       els.postcode.addEventListener('input', debounce(showSuggestions, 280));
       document.addEventListener('click', (e)=>{ if (!els.pcSuggest.contains(e.target) && e.target!==els.postcode){ hideSuggestions(); }});
       els.geocodeBtn.addEventListener('click', onPreview);
       els.saveBtn.addEventListener('click', onSave);
-
-      // Keyboard
-      document.addEventListener('keydown', (e)=>{
-        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); els.search.focus(); }
-        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='n'){ e.preventDefault(); openAddDialog(null); }
-      });
-
-      // Close dialog when clicking the backdrop
-      els.addDialog.addEventListener('click', (e)=>{ if (e.target===els.addDialog) els.addDialog.close(); });
     }
 
     // ====== Rendering ======
@@ -262,9 +237,8 @@
       const bounds=[];
       filtered.forEach(h=>{
         if (isNum(h.lat) && isNum(h.lng)){
-          const m = L.marker([h.lat,h.lng], { icon: markerIcon(colorFor(h)), draggable:true }).addTo(LAYER);
-          m.bindPopup(`<strong>${esc(h.name||'Halloween House')}</strong><br><span class="muted">${esc(h.fullAddress || h.address || '')}</span><br>${h.flags?.teal?'<span class="badge teal">Teal pumpkin</span>':''}${h.notes?`<div style="margin-top:6px">${esc(h.notes)}</div>`:''}`);
-          m.on('dragend', e=>{ const {lat,lng}=e.target.getLatLng(); h.lat=lat; h.lng=lng; h.updatedAt=Date.now(); persist(h,false); });
+          const m = L.marker([h.lat,h.lng], { icon: markerIcon(colorFor(h)) }).addTo(LAYER); // no draggable
+          m.bindPopup(`<strong>${esc(h.name||'Halloween House')}</strong><br><span class="muted">${esc(h.fullAddress || h.address || '')}</span>${h.flags?.teal?'<br><span class="badge teal">Teal pumpkin</span>':''}${h.notes?`<div style="margin-top:6px">${esc(h.notes)}</div>`:''}`);
           bounds.push([h.lat,h.lng]);
         }
       });
@@ -302,8 +276,8 @@
       return el;
     }
 
-    // ====== Add dialog ======
-    let editing = null; // public page = add only, but keep for safety
+    // ====== Add dialog (preview not draggable) ======
+    let editing = null;
     function openAddDialog(existing){
       editing = existing?.id || null; els.errorMsg.style.display='none'; els.previewMap.style.display='none';
       els.houseNo.value = existing?.houseNo || '';
@@ -328,7 +302,7 @@
         PREVIEW_MAP.setView([54.5,-3.4],5);
       }
       if (existing && isNum(existing.lat) && isNum(existing.lng)){
-        if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([existing.lat, existing.lng], {draggable:true}).addTo(PREVIEW_MAP); }
+        if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([existing.lat, existing.lng]).addTo(PREVIEW_MAP); }
         else PREVIEW_MARKER.setLatLng([existing.lat, existing.lng]);
         PREVIEW_MAP.setView([existing.lat, existing.lng], 15);
       } else {
@@ -343,7 +317,7 @@
         const pos = await smartGeocode({ houseNo: els.houseNo.value, address: els.address.value, postcode: els.postcode.value });
         showPreviewAt(pos.lat,pos.lng);
       } catch {
-        showError('Could not find that address. You can still save and drag the pin later.');
+        showError('Could not find that address. You can still save and it will geocode.');
       }
     }
 
@@ -367,7 +341,7 @@
         try{
           const pos = await smartGeocode({ houseNo: item.houseNo, address: item.address, postcode: item.postcode });
           item.lat = pos.lat; item.lng = pos.lng;
-        }catch{/* leave undefined; user can drag later */}
+        }catch{}
       }
 
       try{
@@ -375,9 +349,6 @@
         els.addDialog.close();
         els.previewMap.style.display='none';
         fitAllMarkers();
-        if (isNew && EMAIL_WEBHOOK){
-          fetch(EMAIL_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ event:'home_added', home:item }) }).catch(()=>{});
-        }
       }catch(err){ showError('Save failed. Check keys/table.'); console.error(err); }
     }
 
@@ -393,7 +364,6 @@
       url.searchParams.set('addressdetails','1');
       url.searchParams.set('countrycodes','gb');
       url.searchParams.set('accept-language','en-GB');
-      // UK viewbox (SW lon,lat, NE lon,lat)
       url.searchParams.set('viewbox','-8.35,49.84,1.78,60.86');
       url.searchParams.set('bounded','1');
       for (const [k,v] of Object.entries(params)){ if (v!=null && v!=='') url.searchParams.set(k, v); }
@@ -404,18 +374,13 @@
       return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
     }
     async function smartGeocode({ houseNo, address, postcode }){
-      const pcRaw = (postcode || '').toUpperCase().replace(/\s+/g,'');
+      const pcRaw = (postocodeOr(postcode) || '').toUpperCase().replace(/\s+/g,''); // helper below
       const pc = pcRaw.length<5 ? pcRaw : pcRaw.slice(0,-3)+' '+pcRaw.slice(-3);
       const { road, place } = splitAddress(address || '');
       const street = [houseNo || '', road || ''].filter(Boolean).join(' ').trim();
 
-      // 1) Structured street + place + postcode
-      if (street || place || pc){
-        try { return await fetchGeo({ street: street || undefined, city: place || undefined, postalcode: pc || undefined }); } catch {}
-      }
-      // 2) Postcode centroid
+      if (street || place || pc){ try { return await fetchGeo({ street: street || undefined, city: place || undefined, postalcode: pc || undefined }); } catch {} }
       if (pc){ try { return await fetchGeo({ postalcode: pc }); } catch {} }
-      // 3) Bounded free-text
       const full = [houseNo, address, pc].filter(Boolean).join(', ');
       if (full){ try { return await fetchGeo({ q: full }); } catch {} }
       throw new Error('Geocoding failed');
@@ -454,7 +419,7 @@
         PREVIEW_MAP = L.map('previewMap', {scrollWheelZoom:false});
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(PREVIEW_MAP);
       }
-      if (!PREVIEW_MARKER){ PREVIEW_MARKER=L.marker([lat,lng],{draggable:true}).addTo(PREVIEW_MAP); }
+      if (!PREVIEW_MARKER){ PREVIEW_MARKER=L.marker([lat,lng]).addTo(PREVIEW_MAP); } // not draggable
       else PREVIEW_MARKER.setLatLng([lat,lng]);
       PREVIEW_MAP.setView([lat,lng],16);
     }
@@ -470,40 +435,37 @@
     function toRow(h){ return { id:h.id, name:h.name, address:h.address, postcode:h.postcode, house_no:h.houseNo, full_address:h.fullAddress, lat:h.lat, lng:h.lng, candy:'Mixed', teal:h.flags?.teal, lights:h.flags?.lights, music:h.flags?.music, animatronics:h.flags?.animatronics, notes:h.notes, updated_at:new Date(h.updatedAt||Date.now()).toISOString() }; }
     function fromRow(r){ return sanitizeHome({ id:r.id, name:r.name, address:r.address, postcode:r.postcode, houseNo:r.house_no, fullAddress:r.full_address, lat:r.lat, lng:r.lng, candy:r.candy, flags:{ teal:!!r.teal, lights:!!r.lights, music:!!r.music, animatronics:!!r.animatronics }, notes:r.notes, updatedAt: Date.parse(r.updated_at||Date.now()) }); }
 
-    // ====== Fit bounds ======
     function fitAllMarkers(){
       const pts = HOMES.filter(h=>isNum(h.lat)&&isNum(h.lng)).map(h=>[h.lat,h.lng]);
       if (pts.length){ try{ MAP.fitBounds(pts,{padding:[40,40]}); }catch{} }
     }
 
-    // ====== Countdown to Oct 31 16:00 GMT ======
+    // Countdown
     function startCountdown(){
       function tick(){
         const y = new Date().getUTCFullYear();
-        const target = new Date(Date.UTC(y, 9, 31, 16, 0, 0)); // Oct (9) 31 @ 16:00 UTC
+        const target = new Date(Date.UTC(y, 9, 31, 16, 0, 0));
         const now = new Date();
         let diff = target - now;
         if (diff <= 0){ els.countdown.textContent = "It's Halloween! 🎃"; return; }
-        const d = Math.floor(diff/86400000);
-        diff %= 86400000;
-        const h = Math.floor(diff/3600000);
-        diff %= 3600000;
-        const m = Math.floor(diff/60000);
-        diff %= 60000;
+        const d = Math.floor(diff/86400000); diff%=86400000;
+        const h = Math.floor(diff/3600000);  diff%=3600000;
+        const m = Math.floor(diff/60000);    diff%=60000;
         const s = Math.floor(diff/1000);
         els.countdown.textContent = `⏳ ${d}d ${h}h ${m}m ${s}s to Halloween (16:00 GMT)`;
       }
       tick(); setInterval(tick, 1000);
     }
 
-    // ====== helpers ======
+    // helpers
     function buildFullAddress(no, addr, pc){ return [no||'', addr||'', pc||''].filter(Boolean).join(', '); }
     function sanitizeHome(h){ return { id:h.id || cryptoId(), name:(h.name||'').slice(0,120), address:(h.address||'').slice(0,180), postcode:(h.postcode||'').slice(0,16), houseNo:(h.houseNo||'').slice(0,16), fullAddress:(h.fullAddress||'').slice(0,240), lat:isNum(h.lat)?+h.lat:undefined, lng:isNum(h.lng)?+h.lng:undefined, candy:h.candy||'Mixed', flags:{ teal:!!(h.flags&&h.flags.teal), lights:!!(h.flags&&h.flags.lights), music:!!(h.flags&&h.flags.music), animatronics:!!(h.flags&&h.flags.animatronics) }, notes:(h.notes||'').slice(0,500), updatedAt:Number(h.updatedAt||Date.now()) }; }
     function cryptoId(){ return [...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join(''); }
     function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
     const esc = s => (s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
     const isNum = x => typeof x==='number' && !Number.isNaN(x);
-
+    function postocodeOr(v){ return v; } // tiny helper to avoid typo refactor risks
+    function showError(msg){ els.errorMsg.textContent=msg; els.errorMsg.style.display='block'; }
   })();
 
   /**
