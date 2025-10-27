@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Spooky Street Map 🎃 (UK)</title>
   <meta name="description" content="Spooky Street Map — add your home if you’re welcoming trick-or-treaters in the UK." />
-  <!-- Emoji favicon (inline SVG) -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8E%83%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
@@ -56,13 +55,11 @@
     .small{font-size:12px; padding:7px 10px}
     @media(max-width:920px){.content{grid-template-columns:1fr} #map,aside{min-height:60vh}}
 
-    /* --- postcode suggestion dropdown --- */
+    /* Postcode suggestion dropdown */
     .sug { position: relative; }
     .sug ul {
-      position: absolute;
-      left: 0; right: 0;
-      margin: 6px 0 0; padding: 6px;
-      list-style: none;
+      position: absolute; left: 0; right: 0;
+      margin: 6px 0 0; padding: 6px; list-style: none;
       background: #121218; border: 1px solid var(--border); border-radius: 10px;
       max-height: 220px; overflow: auto; z-index: 1001;
     }
@@ -115,11 +112,9 @@
           <input type="text" id="houseNo" placeholder="e.g., 12"></label></div>
         <div><label>Postcode
           <input type="text" id="postcode" placeholder="e.g., DE7 9JL">
-          <!-- postcode suggestions dropdown -->
           <div id="pcSuggest" class="sug hidden"></div>
         </label></div>
         <div class="full"><label>Street & Town/City
-          <!-- datalist kept for keyboard users; primary suggestions show under postcode -->
           <input type="text" id="address" list="addrSuggestions" placeholder="e.g., Stoppard Close, Ilkeston, Derbyshire" required></label></div>
 
         <!-- Hidden date/time (kept for DB compatibility) -->
@@ -150,7 +145,6 @@
       <p class="note" style="margin-top:10px">Data saves to the cloud if configured below, otherwise only in this browser.</p>
       <p class="note danger" id="errorMsg" style="display:none"></p>
 
-      <!-- datalist for accessibility / optional use -->
       <datalist id="addrSuggestions"></datalist>
     </form>
   </dialog>
@@ -168,6 +162,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
   (function(){
+    // Toggle this to true if you ever want to show Delete buttons again:
+    const ADMIN_MODE = false;
+
     // ====== CLOUD CONFIG ======
     const SUPABASE_URL = "https://gstufixpbltnarnhrwcb.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzdHVmaXhwYmx0bmFybmhyd2NiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NDEyODMsImV4cCI6MjA3NzExNzI4M30.rg05a4k_uUJopohOHf3RGo5-RZAvVjq85cg1kra_tMw";
@@ -212,7 +209,7 @@
       else { loadLocal(); seedIfEmpty(); }
       initMap();
       render();
-      fitAllMarkers(); // show the area containing pins on startup
+      fitAllMarkers();
     }
 
     function loadLocal(){ try{ HOMES = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch{ HOMES = [] } }
@@ -237,8 +234,7 @@
         .on('postgres_changes', { event:'*', schema:'public', table:CLOUD_TABLE }, payload => {
           const { eventType, new: n, old } = payload;
           if (eventType === 'INSERT' || eventType === 'UPDATE'){
-            upsertLocal(fromRow(n), true);
-            fitAllMarkers();
+            upsertLocal(fromRow(n), true); fitAllMarkers();
           } else if (eventType === 'DELETE'){
             HOMES = HOMES.filter(h=>h.id!==old.id); render(); fitAllMarkers();
           }
@@ -254,12 +250,12 @@
       MAP = L.map('map', {scrollWheelZoom:true});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(MAP);
       LAYER = L.layerGroup().addTo(MAP);
-      MAP.setView([54.5, -3.4], 5); // UK-wide start
+      MAP.setView([54.5, -3.4], 5);
       if (navigator.geolocation){ navigator.geolocation.getCurrentPosition(pos=>MAP.setView([pos.coords.latitude, pos.coords.longitude], 13), ()=>{}); }
     }
 
     function markerIcon(color){ return L.divIcon({ className:'custom-pin', html:`<div style="width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #0b0b0d;box-shadow:0 0 0 2px rgba(0,0,0,.2)"></div>`, iconSize:[18,18] }); }
-    function colorFor(h){ return h.flags?.teal ? '#2fb1d9' : '#ff7a00'; } // teal = blue, otherwise orange
+    function colorFor(h){ return h.flags?.teal ? '#2fb1d9' : '#ff7a00'; }
 
     function render(){
       LAYER.clearLayers();
@@ -271,7 +267,7 @@
         if (activeFilters.has('teal') && !h.flags?.teal) return false;
         if (activeFilters.has('lights') && !h.flags?.lights) return false;
         if (activeFilters.has('music') && !h.flags?.music) return false;
-        if (activeFilters.has('animatronics') && !h.flags?.animatronics) return false; 
+        if (activeFilters.has('animatronics') && !h.flags?.animatronics) return false;
         return true;
       });
 
@@ -286,7 +282,6 @@
       });
       if (bounds.length) try{ MAP.fitBounds(bounds,{padding:[40,40]}); }catch{}
 
-      // List
       els.list.innerHTML = '';
       if (!filtered.length){ els.list.innerHTML = `<p class="muted">No homes match your filters yet.</p>`; }
       else filtered
@@ -315,7 +310,7 @@
             ${h.flags?.animatronics?'<span class="badge">Animatronics</span>':''}
             <button class="btn small ghost" data-id="${h.id}" data-act="center">📍 Center</button>
             <button class="btn small" data-id="${h.id}" data-act="edit">✏️ Edit</button>
-            <button class="btn small ghost danger" data-id="${h.id}" data-act="delete">🗑️ Delete</button>
+            ${ADMIN_MODE ? `<button class="btn small ghost danger" data-id="${h.id}" data-act="delete">🗑️ Delete</button>` : ``}
           </div>
         </div>`;
       el.querySelectorAll('button').forEach(btn=>{
@@ -323,7 +318,7 @@
           const id = btn.dataset.id; const act = btn.dataset.act; const item = HOMES.find(x=>x.id===id); if (!item) return;
           if (act==='center' && isNumber(item.lat)&&isNumber(item.lng)) MAP.setView([item.lat,item.lng], 18, {animate:true});
           else if (act==='edit') openAddDialog(item);
-          else if (act==='delete') if (confirm('Remove this home?')) removeHome(item.id);
+          else if (act==='delete' && ADMIN_MODE) if (confirm('Remove this home?')) removeHome(item.id);
         });
       });
       return el;
@@ -336,16 +331,15 @@
         <div style="margin-top:6px">${escapeHTML(h.notes||'')}</div>`;
     }
 
-    // ====== Postcode → Address suggestions ======
+    // ====== Postcode → Address suggestions & Auto-Preview ======
     const pcSuggestEl = document.getElementById('pcSuggest');
 
     const suggest = debounce(async ()=>{
       const pcRaw = (els.postcode.value||'').toUpperCase().replace(/\s+/g,'');
       if (pcRaw.length < 5){ hidePcSuggestions(); return; }
-      const pc = formatUKPostcode(pcRaw); // e.g., DE79JL -> DE7 9JL
+      const pc = formatUKPostcode(pcRaw);
       if (!pc){ hidePcSuggestions(); return; }
-      // show normalised postcode back in the field
-      els.postcode.value = pc;
+      els.postcode.value = pc; // show normalised form
 
       try{
         const url = new URL('https://nominatim.openstreetmap.org/search');
@@ -353,6 +347,7 @@
         url.searchParams.set('q', pc + ' UK');
         url.searchParams.set('limit', '8');
         url.searchParams.set('addressdetails', '1');
+        url.searchParams.set('countrycodes', 'gb');
         const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
         if (!res.ok) throw new Error('lookup failed');
         const data = await res.json();
@@ -371,7 +366,7 @@
       }catch(e){
         hidePcSuggestions();
       }
-    }, 300);
+    }, 280);
 
     function renderPcSuggestions(list){
       if (!pcSuggestEl) return;
@@ -388,7 +383,7 @@
           const chosen = li.getAttribute('data-addr') || '';
           document.getElementById('address').value = chosen;
           hidePcSuggestions();
-          await maybePreview();
+          await maybePreview(); // <— auto-preview after choosing
           document.getElementById('houseNo').focus();
         });
       });
@@ -400,42 +395,58 @@
     }
 
     function formatUKPostcode(s){
-      // Basic normaliser: inserts a space before the last 3 chars if length allows
       if (s.length < 5) return null;
       return s.slice(0, -3) + ' ' + s.slice(-3);
     }
 
-    // When user picks/edits address, try to preview a pin immediately
+    // Auto-preview when we have enough info (postcode + address OR fullAddress)
+    const previewDebounced = debounce(maybePreview, 350);
+    document.getElementById('postcode').addEventListener('input', suggest);
+    document.getElementById('postcode').addEventListener('blur', previewDebounced);
+    document.getElementById('postcode').addEventListener('keydown', (e)=>{ if (e.key === 'Escape') hidePcSuggestions(); });
+    document.addEventListener('click', (e)=>{ if (!pcSuggestEl.contains(e.target) && e.target.id !== 'postcode'){ hidePcSuggestions(); }});
+    document.getElementById('address').addEventListener('input', previewDebounced);
+
     async function maybePreview(){
       const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value);
       if (!full.trim()) return;
       try{
         const pos = await geocode(full);
-        els.previewMap.style.display = 'block';
-        if (!PREVIEW_MAP){
-          PREVIEW_MAP = L.map('previewMap', {scrollWheelZoom:false});
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(PREVIEW_MAP);
-        }
-        if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([pos.lat,pos.lng], {draggable:true}).addTo(PREVIEW_MAP); }
-        else { PREVIEW_MARKER.setLatLng([pos.lat,pos.lng]); }
-        PREVIEW_MAP.setView([pos.lat,pos.lng], 16);
-      }catch{/* ignore */}
+        showPreviewAt(pos.lat, pos.lng);
+      }catch{
+        showError('Could not preview that address yet. You can still save and drag the pin.');
+      }
     }
 
-    // Wire up postcode & address events
-    document.getElementById('postcode').addEventListener('input', suggest);
-    document.getElementById('postcode').addEventListener('keydown', (e)=>{ if (e.key === 'Escape') hidePcSuggestions(); });
-    document.addEventListener('click', (e)=>{
-      if (!pcSuggestEl) return;
-      if (!pcSuggestEl.contains(e.target) && e.target.id !== 'postcode'){ hidePcSuggestions(); }
-    });
-    document.getElementById('address').addEventListener('change', maybePreview);
+    function showPreviewAt(lat,lng){
+      els.previewMap.style.display = 'block';
+      if (!PREVIEW_MAP){
+        PREVIEW_MAP = L.map('previewMap', {scrollWheelZoom:false});
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(PREVIEW_MAP);
+      }
+      if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([lat,lng], {draggable:true}).addTo(PREVIEW_MAP); }
+      else { PREVIEW_MARKER.setLatLng([lat,lng]); }
+      PREVIEW_MAP.setView([lat,lng], 16);
+    }
+
+    async function geocode(q){
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('format','json');
+      url.searchParams.set('q', q);
+      url.searchParams.set('limit','1');
+      url.searchParams.set('addressdetails','0');
+      url.searchParams.set('countrycodes','gb');
+      const res = await fetch(url.toString(), {headers:{'Accept':'application/json'}});
+      if (!res.ok) throw new Error('Geocoding failed');
+      const data = await res.json();
+      if (!data?.length) throw new Error('No results');
+      return {lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)};
+    }
 
     // ====== Add/Edit ======
     let editing = null;
     function openAddDialog(existing){
       editing = existing?.id || null; els.errorMsg.style.display='none'; els.previewMap.style.display='none';
-      // Never prefill address fields
       els.houseNo.value = existing?.houseNo || '';
       els.postcode.value = existing?.postcode || '';
       els.address.value  = existing?.address  || '';
@@ -446,35 +457,34 @@
     }
 
     function initPreview(existing){
-      if (!PREVIEW_MAP){ els.previewMap.style.display='block'; PREVIEW_MAP = L.map('previewMap', {scrollWheelZoom:false}); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(PREVIEW_MAP); PREVIEW_MAP.setView([54.5,-3.4],5); }
+      if (!PREVIEW_MAP){
+        els.previewMap.style.display='block';
+        PREVIEW_MAP = L.map('previewMap', {scrollWheelZoom:false});
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(PREVIEW_MAP);
+        PREVIEW_MAP.setView([54.5,-3.4],5);
+      }
       if (existing && isNumber(existing.lat) && isNumber(existing.lng)){
         if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([existing.lat, existing.lng], {draggable:true}).addTo(PREVIEW_MAP); }
-        else PREVIEW_MARKER.setLatLng([existing.lat, existing.lng]); PREVIEW_MAP.setView([existing.lat, existing.lng], 15);
-      } else { if (PREVIEW_MARKER){ PREVIEW_MAP.removeLayer(PREVIEW_MARKER); PREVIEW_MARKER=null; } PREVIEW_MAP.setView([54.5,-3.4],5); }
+        else PREVIEW_MARKER.setLatLng([existing.lat, existing.lng]);
+        PREVIEW_MAP.setView([existing.lat, existing.lng], 15);
+      } else {
+        if (PREVIEW_MARKER){ PREVIEW_MAP.removeLayer(PREVIEW_MARKER); PREVIEW_MARKER=null; }
+        PREVIEW_MAP.setView([54.5,-3.4],5);
+      }
     }
 
-    async function geocode(q){ const url = new URL('https://nominatim.openstreetmap.org/search'); url.searchParams.set('format','json'); url.searchParams.set('q', q); url.searchParams.set('limit','1'); url.searchParams.set('addressdetails','0'); const res = await fetch(url.toString(), {headers:{'Accept':'application/json'}}); if (!res.ok) throw new Error('Geocoding failed'); const data = await res.json(); if (!data?.length) throw new Error('No results'); return {lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)}; }
-
-    // Events
-    document.getElementById('addHomeBtn').addEventListener('click', ()=> openAddDialog(null));
-    document.getElementById('search').addEventListener('input', debounce(render, 120));
-    Array.from(document.querySelectorAll('.chip')).forEach(c=> c.addEventListener('click', ()=>{ c.classList.toggle('active'); render(); }));
-
+    // Preview button (manual)
     document.getElementById('geocodeBtn').addEventListener('click', async (e)=>{
       e.preventDefault(); els.errorMsg.style.display='none';
       const full = buildFullAddress(els.houseNo.value, els.address.value, els.postcode.value);
       if (!full){ showError('Please enter address details.'); return; }
       try{
         const pos = await geocode(full);
-        els.previewMap.style.display='block';
-        if (!PREVIEW_MAP) initPreview();
-        if (!PREVIEW_MARKER){ PREVIEW_MARKER = L.marker([pos.lat,pos.lng], {draggable:true}).addTo(PREVIEW_MAP); }
-        else { PREVIEW_MARKER.setLatLng([pos.lat,pos.lng]); }
-        PREVIEW_MAP.setView([pos.lat,pos.lng], 16);
+        showPreviewAt(pos.lat, pos.lng);
       }catch{ showError('Could not find that address. You can still save and drag the pin later.'); }
     });
 
-    // Save: auto-geocode if needed, then fit map to pins
+    // Save
     document.getElementById('saveBtn').addEventListener('click', async (e)=>{
       e.preventDefault(); els.errorMsg.style.display='none';
       const item = collectForm();
@@ -520,11 +530,9 @@
     async function persist(h){ h = sanitizeHome(h); upsertLocal(h, false); if (cloudMode){ const saved = await cloudUpsert(h); upsertLocal(saved, false); } else saveLocal(); render(); }
     function persistAll(list){ if (cloudMode){ HOMES = list.map(sanitizeHome); render(); } else { localStorage.setItem(KEY, JSON.stringify(list)); render(); } }
 
-    // Row mapping to/from DB
     function toRow(h){ return { id:h.id, name:h.name, address:h.address, postcode:h.postcode, house_no:h.houseNo, full_address:h.fullAddress, lat:h.lat, lng:h.lng, date:h.date, start:h.start, end:h.end, candy:h.candy, teal: !!h.flags?.teal, lights: !!h.flags?.lights, music: !!h.flags?.music, animatronics: !!h.flags?.animatronics, notes:h.notes, updated_at: new Date(h.updatedAt).toISOString() }; }
     function fromRow(r){ return sanitizeHome({ id:r.id, name:r.name, address:r.address, postcode:r.postcode, houseNo:r.house_no, fullAddress:r.full_address, lat:r.lat, lng:r.lng, date:r.date, start:r.start, end:r.end, candy:r.candy, flags:{ teal:!!r.teal, lights:!!r.lights, music:!!r.music, animatronics:!!r.animatronics }, notes:r.notes, updatedAt: Date.parse(r.updated_at||Date.now()) }); }
 
-    // Fit map to all markers
     function fitAllMarkers(){
       const pts = HOMES.filter(h=>isNumber(h.lat)&&isNumber(h.lng)).map(h=>[h.lat,h.lng]);
       if (pts.length){ try{ MAP.fitBounds(pts,{padding:[40,40]}); }catch{} }
@@ -533,7 +541,7 @@
     // Init
     init();
 
-    // Keyboard shortcuts & dialog handling
+    // Shortcuts & dialog handling
     document.addEventListener('keydown', (e)=>{ if ((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); document.getElementById('search').focus(); } if ((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){ e.preventDefault(); openAddDialog(null); } });
     [document.getElementById('addDialog'), document.getElementById('importDialog')].forEach(dlg=> dlg.addEventListener('click', (e)=>{ if (e.target===dlg) dlg.close(); }));
   })();
@@ -542,7 +550,7 @@
    * @typedef Home
    * @property {string} id
    * @property {string} name
-   * @property {string} address   // street & town/city
+   * @property {string} address
    * @property {string} postcode
    * @property {string} houseNo
    * @property {string} fullAddress
