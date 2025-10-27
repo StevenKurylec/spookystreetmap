@@ -55,6 +55,20 @@
     .toolbar{display:flex; gap:8px; flex-wrap:wrap}
     .small{font-size:12px; padding:7px 10px}
     @media(max-width:920px){.content{grid-template-columns:1fr} #map,aside{min-height:60vh}}
+
+    /* --- postcode suggestion dropdown --- */
+    .sug { position: relative; }
+    .sug ul {
+      position: absolute;
+      left: 0; right: 0;
+      margin: 6px 0 0; padding: 6px;
+      list-style: none;
+      background: #121218; border: 1px solid var(--border); border-radius: 10px;
+      max-height: 220px; overflow: auto; z-index: 1001;
+    }
+    .sug li { padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--text); }
+    .sug li:hover { background: #1a1a24; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -100,9 +114,12 @@
         <div><label>House number
           <input type="text" id="houseNo" placeholder="e.g., 12"></label></div>
         <div><label>Postcode
-          <input type="text" id="postcode" placeholder="e.g., DE7 9JL"></label></div>
+          <input type="text" id="postcode" placeholder="e.g., DE7 9JL">
+          <!-- postcode suggestions dropdown -->
+          <div id="pcSuggest" class="sug hidden"></div>
+        </label></div>
         <div class="full"><label>Street & Town/City
-          <!-- attach suggestions via datalist -->
+          <!-- datalist kept for keyboard users; primary suggestions show under postcode -->
           <input type="text" id="address" list="addrSuggestions" placeholder="e.g., Stoppard Close, Ilkeston, Derbyshire" required></label></div>
 
         <!-- Hidden date/time (kept for DB compatibility) -->
@@ -133,7 +150,7 @@
       <p class="note" style="margin-top:10px">Data saves to the cloud if configured below, otherwise only in this browser.</p>
       <p class="note danger" id="errorMsg" style="display:none"></p>
 
-      <!-- datalist for postcode-based address suggestions -->
+      <!-- datalist for accessibility / optional use -->
       <datalist id="addrSuggestions"></datalist>
     </form>
   </dialog>
@@ -320,11 +337,15 @@
     }
 
     // ====== Postcode → Address suggestions ======
+    const pcSuggestEl = document.getElementById('pcSuggest');
+
     const suggest = debounce(async ()=>{
       const pcRaw = (els.postcode.value||'').toUpperCase().replace(/\s+/g,'');
-      if (pcRaw.length < 5) return clearSuggestions();
+      if (pcRaw.length < 5){ hidePcSuggestions(); return; }
       const pc = formatUKPostcode(pcRaw); // e.g., DE79JL -> DE7 9JL
-      if (!pc){ clearSuggestions(); return; }
+      if (!pc){ hidePcSuggestions(); return; }
+      // show normalised postcode back in the field
+      els.postcode.value = pc;
 
       try{
         const url = new URL('https://nominatim.openstreetmap.org/search');
@@ -346,27 +367,42 @@
           const s = `${road}, ${town}`;
           if (!seen.has(s)){ seen.add(s); options.push(s); }
         }
-        fillSuggestions(options);
-
-      }catch(e){ clearSuggestions(); }
+        renderPcSuggestions(options);
+      }catch(e){
+        hidePcSuggestions();
+      }
     }, 300);
 
-    function fillSuggestions(list){
-      els.addrSuggestions.innerHTML = '';
-      list.slice(0,12).forEach(s=>{
-        const opt = document.createElement('option');
-        opt.value = s;
-        els.addrSuggestions.appendChild(opt);
+    function renderPcSuggestions(list){
+      if (!pcSuggestEl) return;
+      if (!list.length){
+        pcSuggestEl.classList.add('hidden');
+        pcSuggestEl.innerHTML = '';
+        return;
+      }
+      const html = '<ul>' + list.slice(0,12).map(s => `<li data-addr="${s.replace(/"/g,'&quot;')}">${s}</li>`).join('') + '</ul>';
+      pcSuggestEl.innerHTML = html;
+      pcSuggestEl.classList.remove('hidden');
+      pcSuggestEl.querySelectorAll('li').forEach(li=>{
+        li.addEventListener('click', async ()=>{
+          const chosen = li.getAttribute('data-addr') || '';
+          document.getElementById('address').value = chosen;
+          hidePcSuggestions();
+          await maybePreview();
+          document.getElementById('houseNo').focus();
+        });
       });
     }
-    function clearSuggestions(){ if (els.addrSuggestions) els.addrSuggestions.innerHTML=''; }
+    function hidePcSuggestions(){
+      if (!pcSuggestEl) return;
+      pcSuggestEl.classList.add('hidden');
+      pcSuggestEl.innerHTML = '';
+    }
 
     function formatUKPostcode(s){
       // Basic normaliser: inserts a space before the last 3 chars if length allows
       if (s.length < 5) return null;
-      const out = s.slice(0, -3) + ' ' + s.slice(-3);
-      // Very light validation (not full spec)
-      return out;
+      return s.slice(0, -3) + ' ' + s.slice(-3);
     }
 
     // When user picks/edits address, try to preview a pin immediately
@@ -388,6 +424,11 @@
 
     // Wire up postcode & address events
     document.getElementById('postcode').addEventListener('input', suggest);
+    document.getElementById('postcode').addEventListener('keydown', (e)=>{ if (e.key === 'Escape') hidePcSuggestions(); });
+    document.addEventListener('click', (e)=>{
+      if (!pcSuggestEl) return;
+      if (!pcSuggestEl.contains(e.target) && e.target.id !== 'postcode'){ hidePcSuggestions(); }
+    });
     document.getElementById('address').addEventListener('change', maybePreview);
 
     // ====== Add/Edit ======
@@ -401,7 +442,7 @@
       els.name.value = existing?.name||''; els.date.value = existing?.date || (els.date?.value ?? ''); els.start.value = existing?.start||''; els.end.value = existing?.end||''; els.candy.value = existing?.candy||'Mixed';
       els.teal.checked = !!existing?.flags?.teal; els.lights.checked=!!existing?.flags?.lights; els.music.checked=!!existing?.flags?.music; els.animatronics.checked=!!existing?.flags?.animatronics; els.notes.value = existing?.notes||'';
       document.getElementById('homeForm').reset; els.addDialog.showModal(); setTimeout(()=> initPreview(existing), 100);
-      clearSuggestions();
+      hidePcSuggestions();
     }
 
     function initPreview(existing){
